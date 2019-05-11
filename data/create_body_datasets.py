@@ -24,13 +24,12 @@
 
 import os
 import numpy as np
-from tools.omni_tools import makepath
-from experiments.nima.tools.rotations import euler2em, em2euler
+from tools.omni_tools import makepath, log2file
+from tools.omni_tools import euler2em, em2euler
 import shutil, sys
 
 import tables as pytables
 from datetime import datetime
-from experiments.nima.tools.omni_tools import log2file
 import torch
 
 def remove_Zrot(pose):
@@ -39,7 +38,17 @@ def remove_Zrot(pose):
     pose[:3] = euler2em(noZ).copy()
     return pose
 
-def create_dataset_records(datasets, amass_dir, out_dir, split_name, rnd_seed = 100):
+def create_dataset_records_V1(datasets, amass_dir, out_dir, split_name, rnd_seed = 100):
+    '''
+    Select random number of frames from all poses within a dataset
+    one caveat is that more standing poses will be selected
+    :param datasets:
+    :param amass_dir:
+    :param out_dir:
+    :param split_name:
+    :param rnd_seed:
+    :return:
+    '''
 
     assert split_name in ['train', 'vald', 'test']
     np.random.seed(rnd_seed)
@@ -75,33 +84,91 @@ def create_dataset_records(datasets, amass_dir, out_dir, split_name, rnd_seed = 
     logger('Len. split %s %d' %(split_name, len(data_pose)))
     logger('##############################################')
 
+def create_dataset_records_V2(datasets, amass_dir, out_dir, split_name, rnd_seed = 100):
+    '''
+    Select random number of frames from central 80 percent of each mocap sequence
+    This is to remedy the issue in V1 and should be tested.
+
+    :param datasets:
+    :param amass_dir:
+    :param out_dir:
+    :param split_name:
+    :param rnd_seed:
+    :return:
+    '''
+    import glob
+    from tqdm import tqdm
+
+    assert split_name in ['train', 'vald', 'test']
+    np.random.seed(rnd_seed)
+
+    makepath(out_dir, isfile=False)
+
+    keep_rate = 0.3 # 30 percent
+
+    data_pose = []
+    data_betas = []
+    data_gender = []
+    for ds_name in datasets:
+        npz_fnames = glob.glob(os.path.join(amass_dir, ds_name, '*/*.npz'))
+        logger('randomly selecting data points from %s.' % (ds_name))
+        for npz_fname in tqdm(npz_fnames):
+            cdata = np.load(npz_fname)
+            N = len(cdata['poses'])
+
+            cdata_ids = np.random.choice(list(range(int(0.1*N), int(0.9*N),1)), int(keep_rate*0.8*N), replace=False)
+
+            data_pose.extend(cdata['poses'][cdata_ids].astype(np.float32))
+            data_betas.extend(np.repeat(cdata['betas'][np.newaxis].astype(np.float32), repeats=len(cdata_ids), axis=0))
+            data_gender.extend([{'male':-1, 'neutral':0, 'female':1}[str(cdata['gender'].astype(np.str))] for _ in cdata_ids])
+
+    outdir = makepath(os.path.join(out_dir, split_name))
+
+    assert len(data_pose) != 0
+
+    outpath = os.path.join(outdir, 'data_pose.pt')
+    torch.save(torch.tensor(np.asarray(data_pose, np.float32)), outpath)
+
+    outpath = os.path.join(outdir, 'data_shape.pt')
+    torch.save(torch.tensor(np.asarray(data_betas, np.float32)), outpath)
+
+    outpath = os.path.join(outdir, 'data_gender.pt')
+    torch.save(torch.tensor(np.asarray(data_gender, np.int32)), outpath)
+
+    logger('Len. split %s %d' %(split_name, len(data_pose)))
 
 if __name__ == '__main__':
     # ['CMU', 'Transitions_mocap', 'MPI_Limits', 'SSM_synced', 'TotalCapture', 'Eyes_Japan_Dataset', 'MPI_mosh', 'MPI_HDM05', 'HumanEva', 'ACCAD', 'EKUT', 'SFU', 'KIT', 'H36M', 'TCD_handMocap', 'BioMotionLab_NTroje']
+
+    msg = '''Trying dataset preparation funtion V2. The new sampling is exxptected to include less number of standing poses of the subject. 
+Before random samples from all the dataset were being picked but now random samples from each mocap sequence"s central 80 percent is picked'''
 
     dumpmode = 'pytorch'
     model_type = 'smpl'
     prior_type = 'VPoser'
 
     amass_dir = '/ps/project/amass/20190313/unified_results'
-    out_dir = '/ps/project/smplbodyprior/BodyPrior/%s/data/20190313_amass_WO_CMU/%s/%s' % (prior_type, model_type, dumpmode)
+    out_dir = '/ps/project/smplbodyprior/BodyPrior/%s/data/20190313_cmu_T2/%s/%s' % (prior_type, model_type, dumpmode)
 
     starttime = datetime.now().replace(microsecond=0)
     log_name = datetime.strftime(starttime, '%Y%m%d_%H%M')
-    logger = log2file(os.path.join(out_dir, '%s.log' % (log_name)))
+
     global logger
+    logger = log2file(os.path.join(out_dir, '%s.log' % (log_name)))
     logger('Creating pytorch dataset at %s'%out_dir)
+    logger(msg)
 
     vald_datasets = ['HumanEva', 'MPI_HDM05', 'SFU', 'MPI_mosh']
     test_datasets = ['Transitions_mocap', 'SSM_synced']
-    train_datasets = ['MPI_Limits', 'TotalCapture', 'Eyes_Japan_Dataset', 'ACCAD', 'EKUT', 'KIT', 'TCD_handMocap', 'BioMotionLab_NTroje']
+    # train_datasets = ['MPI_Limits', 'TotalCapture', 'Eyes_Japan_Dataset', 'ACCAD', 'EKUT', 'KIT', 'TCD_handMocap', 'BioMotionLab_NTroje']
+    train_datasets = ['CMU']
     # train_datasets = ['CMU', 'MPI_Limits', 'SSM_synced', 'TotalCapture', 'Eyes_Japan_Dataset', 'ACCAD', 'EKUT', 'KIT', 'TCD_handMocap', 'BioMotionLab_NTroje']
     # train_datasets = ['CMU', 'MPI_Limits', 'H3.6M']#cvpr19_initial
     train_datasets = list(set(train_datasets).difference(set(vald_datasets+test_datasets)))
 
-    create_dataset_records(vald_datasets, amass_dir, out_dir, split_name='vald')
-    create_dataset_records(test_datasets, amass_dir, out_dir, split_name='test')
-    create_dataset_records(train_datasets, amass_dir, out_dir, split_name='train')
+    create_dataset_records_V2(vald_datasets, amass_dir, out_dir, split_name='vald')
+    create_dataset_records_V2(test_datasets, amass_dir, out_dir, split_name='test')
+    create_dataset_records_V2(train_datasets, amass_dir, out_dir, split_name='train')
 
     script_name = os.path.basename(sys.argv[0])
     shutil.copy2(script_name, os.path.join(out_dir, script_name.replace('.py', '_%s.py' % log_name)))
