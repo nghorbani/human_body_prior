@@ -22,15 +22,16 @@
 #
 # 2019.05.10
 
+__all__ = ['sample_vposer']
+
 import numpy as np
-from tools.omni_tools import copy2cpu
 
 import os
 
-def save_results(pose_body, out_imgpath, save_obj=False):
-    from tools.viz_tools import vis_smpl_params, imagearray2file, smpl_params2ply
-    from tools.omni_tools import makepath
-    from tools.body_model import BodyModel
+def dump_vposer_samples(pose_body, out_imgpath, save_obj=True):
+    from human_body_prior.tools.viz_tools import vis_smpl_params, imagearray2file, smpl_params2ply
+    from human_body_prior.tools.omni_tools import makepath
+    from human_body_prior.body_model.body_model import BodyModel
     bm_path = '/ps/project/common/moshpp/smpl/locked_head/male/model.npz'
     bm = BodyModel(bm_path, 'smpl')
 
@@ -48,24 +49,24 @@ def save_results(pose_body, out_imgpath, save_obj=False):
 
     return True
 
-def sample_vposer_smpl_pt(exp_dir, row=5, col=5, save_obj=False):
-    from tools.omni_tools import id_generator, makepath
-    from tools.vposer_loader_pt import load_vposer_pt
+def sample_vposer(exp_dir, num_samples=5):
+    from human_body_prior.tools.omni_tools import id_generator, makepath
+    from human_body_prior.tools.vposer_loader_pt import vposer_loader_pt
+    from human_body_prior.tools.omni_tools import copy2cpu
 
-    vposer_pt, ps = load_vposer_pt(exp_dir, model_type='smpl')
+    vposer_pt, ps = vposer_loader_pt(exp_dir, model_type='smpl')
 
-    sampled_pose_body = copy2cpu(vposer_pt.sample_poses(num_poses=row*col))
+    sampled_pose_body = copy2cpu(vposer_pt.sample_poses(num_poses=num_samples))
 
     out_dir = makepath(os.path.join(ps.work_dir, 'evaluations', 'pose_generation'))
     out_imgpath = os.path.join(out_dir, '%s.png' % id_generator(6))
 
-    save_results(sampled_pose_body, out_imgpath, save_obj)
+    dump_vposer_samples(sampled_pose_body, out_imgpath)
+    print('Dumped samples at %s'%out_dir)
+    return sampled_pose_body
 
 
 if __name__ == '__main__':
 
-    col = 2
-    row = 2
-
     expr_dir = '../expriments/VPoser/smpl/pytorch/0020_06_amass'
-    sample_vposer_smpl_pt(expr_dir, row, col, save_obj=True)
+    sample_vposer(expr_dir, 5, save_samples=True)

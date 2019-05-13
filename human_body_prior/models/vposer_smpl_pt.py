@@ -41,7 +41,7 @@ import numpy as np
 from datetime import datetime
 from configer import Configer
 
-from tools.omni_tools import copy2cpu as c2c
+from human_body_prior.tools.omni_tools import copy2cpu as c2c
 import torchgeometry as tgm
 
 
@@ -168,11 +168,11 @@ class VPoser(nn.Module):
 class vposer_trainer:
 
     def __init__(self, work_dir, ps):
-        from data.body_dataloader import AMASSDataset
+        from human_body_prior.data.body_dataloader import AMASSDataset
         from torch.utils.data import DataLoader
         from tensorboardX import SummaryWriter
 
-        from tools.omni_tools import log2file, makepath
+        from human_body_prior.tools.omni_tools import log2file, makepath
 
         self.pt_dtype = torch.float64 if ps.fp_precision == '64' else torch.float32
 
@@ -405,7 +405,7 @@ class vposer_trainer:
 
     @staticmethod
     def vis_results(porig, vposer_model, imgpath, model_type='smpl'):
-        from tools.viz_tools import imagearray2file, vis_smpl_params
+        from human_body_prior.tools.viz_tools import imagearray2file, vis_smpl_params
 
         num_bodies_to_display = porig.size(0)
         with torch.no_grad():

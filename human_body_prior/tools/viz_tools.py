@@ -23,8 +23,8 @@
 # 2018.01.02
 
 import numpy as np
-from tools.omni_tools import copy2cpu as c2c
-from tools.omni_tools import makepath
+from human_body_prior.tools.omni_tools import copy2cpu as c2c
+from human_body_prior.tools.omni_tools import makepath
 import os
 import trimesh
 
@@ -59,14 +59,14 @@ def smpl_params2ply(bm, out_dir, pose_body, pose_hand = None, trans=None, betas=
 def vis_smpl_params(bm, pose_body, pose_hand = None, trans=None, betas=None, root_orient=None):
     '''
     :param bm: pytorch body model with batch_size 1
-    :param pose_body: can be a single list of pose parameters, or a list of list of pose parameters:
+    :param pose_body: Nx1x21x3
     :param trans: Nx3
     :param betas: Nxnum_betas
     :return: N x 400 x 400 x 3
     '''
 
-    from tools.omni_tools import copy2cpu as c2c
-    from tools.omni_tools import colors
+    from human_body_prior.tools.omni_tools import copy2cpu as c2c
+    from human_body_prior.tools.omni_tools import colors
     from imageio import imread
     faces = c2c(bm.f)
 
@@ -105,6 +105,10 @@ def imagearray2file(img_array, outpath=None, fps=30):
         if outpath is given as a gif file, an animated image with T frames will be created.
     '''
     import cv2
+    from human_body_prior.tools.omni_tools import makepath
+
+    makepath(outpath, isfile=True)
+
     if not isinstance(img_array, np.ndarray):img_array = np.array(img_array)
 
     if img_array.ndim < 6: img_array = img_array[:,np.newaxis]#.expand_dims(axis=1)
@@ -124,7 +128,6 @@ def imagearray2file(img_array, outpath=None, fps=30):
 
     if outpath is not None:
         if '.png' in outpath:
-            if not os.path.exists(os.path.dirname(outpath)): os.makedirs(os.path.dirname(outpath))
             for tIdx in range(T):
                 if T > 1:
                     cur_outpath = outpath.replace('.png', '_%03d.png'%tIdx)

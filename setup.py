@@ -13,7 +13,7 @@
 #
 # If you use this code in a research publication please consider citing the following:
 #
-# Expressive Body Capture: 3D Hands, Face, and Body from a Single Image <https://arxiv.org/abs/1904.05866>
+# Expressive Body Capture: 3D Hands, Face, and Body from a Single Image <http://arxiv.org/abs/1904.05866>
 # AMASS: Archive of Motion Capture as Surface Shapes <https://arxiv.org/abs/1904.03278>
 #
 #
@@ -22,25 +22,24 @@
 #
 # 2019.05.10
 
-try:
-    from setuptools import setup, convert_path
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup, find_packages
 
-setup(name='hposer',
-      version='0.8.0',
-      packages=['configer'],
-      # package_data={'tests': ['./sample_settings.ini']},
+setup(name='human_body_prior',
+      version='0.8.1',
+      packages = find_packages(),
+      # packages=['human_body_prior', 'human_body_prior/data', 'human_body_prior/tutorials', 'human_body_prior/models', 'human_body_prior/tools'],
+      # package_data={'tests': ['./samples']},
       author='Nima Ghorbani',
       author_email='nima.gbani@gmail.com',
       maintainer='Nima Ghorbani',
       maintainer_email='nima.gbani@gmail.com',
-      url='https://github.com/nghorbani/configer',
-      description='Easy configuration of arguments in a python code!',
+      url='https://github.com/nghorbani/HumanBodyPrior',
+      description='Variational human pose prior for human pose synthesis and estimation.',
       long_description=open("README.md").read(),
       long_description_content_type="text/markdown",
       license=u"GNU Affero General Public License, version 3",
-      install_requires=['torch', 'tensorboardX', 'torchgeometry', 'opencv-python', 'scikit-image', 'configer', 'imageio', 'transforms3d'],
+      install_requires=['torch>=1.1.0', 'tensorboardX>=1.6', 'torchgeometry>=0.1.2', 'opencv-python>=4.1.0.25',
+                        'scikit-image>=0.15.0', 'configer>=1.2.3', 'imageio>=2.5.0', 'transforms3d>=0.3.1', 'trimesh'],
       classifiers=[
           "Intended Audience :: Developers",
           'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',

@@ -43,7 +43,7 @@ def expid2model(exp_dir, model_type):
 
     return ps, trained_model_fname
 
-def load_vposer_pt(exp_dir, model_type='smpl'):
+def vposer_loader_pt(exp_dir, model_type='smpl'):
     '''
 
     :param exp_dir:
@@ -56,8 +56,8 @@ def load_vposer_pt(exp_dir, model_type='smpl'):
 
     ps, trained_model_fname = expid2model(exp_dir, model_type=model_type)
 
-    vposer_path = '/home/nghorbani/code-repos/human_body_prior/models/vposer_smpl_pt.py'
-    # vposer_path = os.path.join(exp_dir, 'vposer_%s_pt.py'%model_type.replace('_left','').replace('_right',''))
+    # vposer_path = '/home/nghorbani/code-repos/human_body_prior/models/vposer_smpl_pt.py'
+    vposer_path = os.path.join(exp_dir, 'vposer_%s_pt.py'%model_type.replace('_left','').replace('_right',''))
 
     spec = importlib.util.spec_from_file_location('VPoser', vposer_path)
     module = importlib.util.module_from_spec(spec)
@@ -72,10 +72,10 @@ def load_vposer_pt(exp_dir, model_type='smpl'):
 
 
 def extract_weights_asnumpy(exp_id, model_type='smpl'):
-    from tools.omni_tools import makepath
-    from tools.omni_tools import copy2cpu as c2c
+    from human_body_prior.tools.omni_tools import makepath
+    from human_body_prior.tools.omni_tools import copy2cpu as c2c
 
-    vposer_pt, vposer_ps = load_vposer_pt(exp_id, model_type=model_type)
+    vposer_pt, vposer_ps = vposer_loader_pt(exp_id, model_type=model_type)
 
     save_wt_dir = makepath(os.path.join(vposer_ps.work_dir, 'weights_npy'))
 
@@ -88,9 +88,9 @@ def extract_weights_asnumpy(exp_id, model_type='smpl'):
     return vposer_ps, weights
 
 if __name__ == '__main__':
-    from tools.omni_tools import copy2cpu as c2c
+    from human_body_prior.tools.omni_tools import copy2cpu as c2c
     expr_dir = '../expriments/VPoser/smpl/pytorch/0020_06_amass'
-    vposer_pt, ps = load_vposer_pt(expr_dir)
+    vposer_pt, ps = vposer_loader_pt(expr_dir)
     pose = c2c(vposer_pt.sample_poses(10, seed=100)[0,0])
     print(pose.shape)
     print(pose[:])

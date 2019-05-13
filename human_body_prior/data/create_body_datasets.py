@@ -24,8 +24,8 @@
 
 import os
 import numpy as np
-from tools.omni_tools import makepath, log2file
-from tools.omni_tools import euler2em, em2euler
+from human_body_prior.tools.omni_tools import makepath, log2file
+from human_body_prior.tools.omni_tools import euler2em, em2euler
 import shutil, sys
 
 import tables as pytables
@@ -84,7 +84,7 @@ def create_dataset_records_V1(datasets, amass_dir, out_dir, split_name, rnd_seed
     logger('Len. split %s %d' %(split_name, len(data_pose)))
     logger('##############################################')
 
-def create_dataset_records_V2(datasets, amass_dir, out_dir, split_name, rnd_seed = 100):
+def create_dataset_records_V2(datasets, amass_dir, out_dir, split_name, logger = None, rnd_seed = 100):
     '''
     Select random number of frames from central 80 percent of each mocap sequence
     This is to remedy the issue in V1 and should be tested.
@@ -104,11 +104,19 @@ def create_dataset_records_V2(datasets, amass_dir, out_dir, split_name, rnd_seed
 
     makepath(out_dir, isfile=False)
 
+    if logger is None:
+        starttime = datetime.now().replace(microsecond=0)
+        log_name = datetime.strftime(starttime, '%Y%m%d_%H%M')
+        logger = log2file(os.path.join(out_dir, '%s.log' % (log_name)))
+        logger('Creating pytorch dataset at %s' % out_dir)
+
     keep_rate = 0.3 # 30 percent
 
     data_pose = []
     data_betas = []
     data_gender = []
+    data_trans = []
+
     for ds_name in datasets:
         npz_fnames = glob.glob(os.path.join(amass_dir, ds_name, '*/*.npz'))
         logger('randomly selecting data points from %s.' % (ds_name))
@@ -117,8 +125,10 @@ def create_dataset_records_V2(datasets, amass_dir, out_dir, split_name, rnd_seed
             N = len(cdata['poses'])
 
             cdata_ids = np.random.choice(list(range(int(0.1*N), int(0.9*N),1)), int(keep_rate*0.8*N), replace=False)
+            if len(cdata_ids)<1: continue
 
             data_pose.extend(cdata['poses'][cdata_ids].astype(np.float32))
+            data_trans.extend(cdata['trans'][cdata_ids].astype(np.float32))
             data_betas.extend(np.repeat(cdata['betas'][np.newaxis].astype(np.float32), repeats=len(cdata_ids), axis=0))
             data_gender.extend([{'male':-1, 'neutral':0, 'female':1}[str(cdata['gender'].astype(np.str))] for _ in cdata_ids])
 
@@ -129,8 +139,11 @@ def create_dataset_records_V2(datasets, amass_dir, out_dir, split_name, rnd_seed
     outpath = os.path.join(outdir, 'data_pose.pt')
     torch.save(torch.tensor(np.asarray(data_pose, np.float32)), outpath)
 
-    outpath = os.path.join(outdir, 'data_shape.pt')
+    outpath = os.path.join(outdir, 'data_betas.pt')
     torch.save(torch.tensor(np.asarray(data_betas, np.float32)), outpath)
+
+    outpath = os.path.join(outdir, 'data_trans.pt')
+    torch.save(torch.tensor(np.asarray(data_trans, np.float32)), outpath)
 
     outpath = os.path.join(outdir, 'data_gender.pt')
     torch.save(torch.tensor(np.asarray(data_gender, np.int32)), outpath)
@@ -153,7 +166,6 @@ Before random samples from all the dataset were being picked but now random samp
     starttime = datetime.now().replace(microsecond=0)
     log_name = datetime.strftime(starttime, '%Y%m%d_%H%M')
 
-    global logger
     logger = log2file(os.path.join(out_dir, '%s.log' % (log_name)))
     logger('Creating pytorch dataset at %s'%out_dir)
     logger(msg)
@@ -166,9 +178,9 @@ Before random samples from all the dataset were being picked but now random samp
     # train_datasets = ['CMU', 'MPI_Limits', 'H3.6M']#cvpr19_initial
     train_datasets = list(set(train_datasets).difference(set(vald_datasets+test_datasets)))
 
-    create_dataset_records_V2(vald_datasets, amass_dir, out_dir, split_name='vald')
-    create_dataset_records_V2(test_datasets, amass_dir, out_dir, split_name='test')
-    create_dataset_records_V2(train_datasets, amass_dir, out_dir, split_name='train')
+    create_dataset_records_V2(vald_datasets, amass_dir, out_dir, split_name='vald', logger=logger)
+    create_dataset_records_V2(test_datasets, amass_dir, out_dir, split_name='test', logger=logger)
+    create_dataset_records_V2(train_datasets, amass_dir, out_dir, split_name='train', logger=logger)
 
     script_name = os.path.basename(sys.argv[0])
     shutil.copy2(script_name, os.path.join(out_dir, script_name.replace('.py', '_%s.py' % log_name)))

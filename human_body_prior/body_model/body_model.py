@@ -23,12 +23,12 @@
 # 2018.12.13
 
 import numpy as np
-from tools.lbs import lbs
+from human_body_prior.body_model.lbs import lbs
 
 import torch
 import torch.nn as nn
 
-from tools.omni_tools import copy2cpu as c2c
+from human_body_prior.tools.omni_tools import copy2cpu as c2c
 
 
 class BodyModel(nn.Module):
@@ -100,12 +100,13 @@ class BodyModel(nn.Module):
             self.register_parameter('expression', nn.Parameter(expression, requires_grad=True))
 
         if use_dmpl:
-            # Todo: I have changed this without testing
-            with open(path_dmpl, 'r') as f:
-                dmpl_shapedirs = pickle.load(f)
-
-            dmpl_shapedirs = dmpl_shapedirs[:, :, :num_dmpls]
-            self.register_buffer('dmpl_shapedirs', torch.tensor(dmpl_shapedirs, dtype=dtype))
+            raise NotImplementedError('DMPL loader not yet developed for python 3.7')
+            # # Todo: I have changed this without testing
+            # with open(path_dmpl, 'r') as f:
+            #     dmpl_shapedirs = pickle.load(f)
+            #
+            # dmpl_shapedirs = dmpl_shapedirs[:, :, :num_dmpls]
+            # self.register_buffer('dmpl_shapedirs', torch.tensor(dmpl_shapedirs, dtype=dtype))
 
         # Regressor for joint locations given shape - 6890 x 24
         self.register_buffer('J_regressor', torch.tensor(smpl_dict['J_regressor'], dtype=dtype))
@@ -265,7 +266,7 @@ class BodyModelWithPoser(BodyModel):
             self.has_gravity = True if '003' in smpl_exp_dir else False
 
             if self.model_type == 'smpl':
-                from tools.vposer_loader_pt import load_vposer_pt as poser_loader
+                from human_body_prior.tools.vposer_loader_pt import vposer_loader_pt as poser_loader
 
                 self.poser_body_pt, self.poser_body_ps = poser_loader(smpl_exp_dir, model_type='smpl')
                 self.poser_body_pt.to(self.trans.device)
@@ -276,9 +277,9 @@ class BodyModelWithPoser(BodyModel):
                 self.pose_body.requires_grad = False
 
             elif self.model_type in ['smplh', 'smplhf']:
-                # from experiments.nima.body_prior.tools_pt.vposer_loader_pt import load_vposer_pt as poser_loader
+                # from experiments.nima.body_prior.tools_pt.vposer_loader_pt import vposer_loader_pt as poser_loader
 
-                from tools.vposer_loader_pt import load_vposer_pt as poser_loader
+                from human_body_prior.tools.vposer_loader_pt import vposer_loader_pt as poser_loader
                 # body
                 self.poser_body_pt, self.poser_body_ps = poser_loader(smpl_exp_dir, model_type='smpl')
                 self.poser_body_pt.to(self.trans.device)
@@ -303,7 +304,7 @@ class BodyModelWithPoser(BodyModel):
                 self.pose_hand.requires_grad = False
 
             elif self.model_type in ['mano_left', 'mano_right']:
-                from tools.vposer_loader_pt import load_vposer_pt as poser_loader
+                from human_body_prior.tools.vposer_loader_pt import vposer_loader_pt as poser_loader
 
                 self.poser_hand_pt, self.poser_hand_ps = poser_loader(mano_exp_dir, model_type=self.model_type)
                 self.poser_hand_pt.to(self.trans.device)

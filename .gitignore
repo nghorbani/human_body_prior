@@ -102,5 +102,5 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-expriments/
+human_body_prior/expriments/
 .idea/
