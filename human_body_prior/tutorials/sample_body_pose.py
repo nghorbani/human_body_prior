@@ -49,12 +49,12 @@ def dump_vposer_samples(pose_body, out_imgpath, save_obj=True):
 
     return True
 
-def sample_vposer(exp_dir, num_samples=5):
+def sample_vposer(exp_dir, num_samples=5, use_snapshot_model=True):
     from human_body_prior.tools.omni_tools import id_generator, makepath
-    from human_body_prior.tools.vposer_loader_pt import vposer_loader_pt
+    from human_body_prior.tools.model_loader import load_vposer
     from human_body_prior.tools.omni_tools import copy2cpu
 
-    vposer_pt, ps = vposer_loader_pt(exp_dir, model_type='smpl')
+    vposer_pt, ps = load_vposer(exp_dir, model_type='smpl', use_snapshot_model=use_snapshot_model)
 
     sampled_pose_body = copy2cpu(vposer_pt.sample_poses(num_poses=num_samples))
 
@@ -69,4 +69,4 @@ def sample_vposer(exp_dir, num_samples=5):
 if __name__ == '__main__':
 
     expr_dir = '../expriments/VPoser/smpl/pytorch/0020_06_amass'
-    sample_vposer(expr_dir, 5)
+    sample_vposer(expr_dir, 5, use_snapshot_model=False)

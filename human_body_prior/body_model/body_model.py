@@ -266,7 +266,7 @@ class BodyModelWithPoser(BodyModel):
             self.has_gravity = True if '003' in smpl_exp_dir else False
 
             if self.model_type == 'smpl':
-                from human_body_prior.tools.vposer_loader_pt import vposer_loader_pt as poser_loader
+                from human_body_prior.tools.model_loader import load_vposer as poser_loader
 
                 self.poser_body_pt, self.poser_body_ps = poser_loader(smpl_exp_dir, model_type='smpl')
                 self.poser_body_pt.to(self.trans.device)
@@ -277,9 +277,9 @@ class BodyModelWithPoser(BodyModel):
                 self.pose_body.requires_grad = False
 
             elif self.model_type in ['smplh', 'smplhf']:
-                # from experiments.nima.body_prior.tools_pt.vposer_loader_pt import vposer_loader_pt as poser_loader
+                # from experiments.nima.body_prior.tools_pt.load_vposer import load_vposer as poser_loader
 
-                from human_body_prior.tools.vposer_loader_pt import vposer_loader_pt as poser_loader
+                from human_body_prior.tools.model_loader import load_vposer as poser_loader
                 # body
                 self.poser_body_pt, self.poser_body_ps = poser_loader(smpl_exp_dir, model_type='smpl')
                 self.poser_body_pt.to(self.trans.device)
@@ -304,7 +304,7 @@ class BodyModelWithPoser(BodyModel):
                 self.pose_hand.requires_grad = False
 
             elif self.model_type in ['mano_left', 'mano_right']:
-                from human_body_prior.tools.vposer_loader_pt import vposer_loader_pt as poser_loader
+                from human_body_prior.tools.model_loader import load_vposer as poser_loader
 
                 self.poser_hand_pt, self.poser_hand_ps = poser_loader(mano_exp_dir, model_type=self.model_type)
                 self.poser_hand_pt.to(self.trans.device)

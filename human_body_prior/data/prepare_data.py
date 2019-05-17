@@ -26,7 +26,7 @@ import os
 import numpy as np
 from human_body_prior.tools.omni_tools import makepath, log2file
 from human_body_prior.tools.omni_tools import euler2em, em2euler
-from human_body_prior.train.vposer_smpl_pt import VPoser
+from human_body_prior.train.train_vposer_smpl import VPoser
 import shutil, sys
 from torch.utils.data import Dataset
 

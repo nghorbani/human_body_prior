@@ -43,11 +43,12 @@ def expid2model(exp_dir, model_type):
 
     return ps, trained_model_fname
 
-def vposer_loader_pt(exp_dir, model_type='smpl'):
+def load_vposer(exp_dir, model_type='smpl', use_snapshot_model = False):
     '''
 
     :param exp_dir:
     :param model_type: mano/smpl
+    :param if True will load the model definition used for training, and not the one in current repository
     :return:
     '''
     import importlib
@@ -55,15 +56,21 @@ def vposer_loader_pt(exp_dir, model_type='smpl'):
     import torch
 
     ps, trained_model_fname = expid2model(exp_dir, model_type=model_type)
+    if use_snapshot_model:
 
-    # vposer_path = '/home/nghorbani/code-repos/human_body_prior/models/vposer_smpl_pt.py'
-    vposer_path = os.path.join(exp_dir, 'vposer_%s_pt.py'%model_type.replace('_left','').replace('_right',''))
+        vposer_path = os.path.join(exp_dir, 'vposer_%s_pt.py'%model_type.replace('_left','').replace('_right',''))
 
-    spec = importlib.util.spec_from_file_location('VPoser', vposer_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+        spec = importlib.util.spec_from_file_location('VPoser', vposer_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
 
-    vposer_pt = getattr(module, 'VPoser')(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape=ps.data_shape)
+        vposer_pt = getattr(module, 'VPoser')(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape=ps.data_shape)
+    else:
+        if model_type == 'smpl':
+            from human_body_prior.train.train_vposer_smpl import VPoser
+        else:
+            raise NotImplementedError
+        vposer_pt = VPoser(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape=ps.data_shape)
 
     vposer_pt.load_state_dict(torch.load(trained_model_fname, map_location='cpu'))
     vposer_pt.eval()
@@ -75,7 +82,7 @@ def extract_weights_asnumpy(exp_id, model_type='smpl'):
     from human_body_prior.tools.omni_tools import makepath
     from human_body_prior.tools.omni_tools import copy2cpu as c2c
 
-    vposer_pt, vposer_ps = vposer_loader_pt(exp_id, model_type=model_type)
+    vposer_pt, vposer_ps = load_vposer(exp_id, model_type=model_type)
 
     save_wt_dir = makepath(os.path.join(vposer_ps.work_dir, 'weights_npy'))
 
@@ -90,7 +97,7 @@ def extract_weights_asnumpy(exp_id, model_type='smpl'):
 if __name__ == '__main__':
     from human_body_prior.tools.omni_tools import copy2cpu as c2c
     expr_dir = '../expriments/VPoser/smpl/pytorch/0020_06_amass'
-    vposer_pt, ps = vposer_loader_pt(expr_dir)
+    vposer_pt, ps = load_vposer(expr_dir, model_type='smpl', use_snapshot_model=False)
     pose = c2c(vposer_pt.sample_poses(10, seed=100)[0,0])
     print(pose.shape)
     print(pose[:])

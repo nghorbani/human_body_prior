@@ -402,7 +402,7 @@ class vposer_trainer:
     @staticmethod
     def vis_results(dorig, vposer_model, imgpath, bm):
         from human_body_prior.tools.visualization_tools import render_smpl_params, imagearray2file
-        from human_body_prior.train.vposer_smpl_pt import VPoser
+        from human_body_prior.train.train_vposer_smpl import VPoser
 
         num_bodies_to_display = dorig['pose_aa'].size(0)
         with torch.no_grad():
@@ -436,8 +436,8 @@ if __name__ == '__main__':
         'batch_size': 256,
         'latentD': 32,
         'num_neurons': 512,
-        'n_workers': 5,
-        'cuda_id':1,
+        'n_workers': 20,
+        'cuda_id':0,
 
         'reg_coef': 5e-4,
         'kl_coef': 5e-3,
