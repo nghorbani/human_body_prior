@@ -69,4 +69,4 @@ def sample_vposer(exp_dir, num_samples=5):
 if __name__ == '__main__':
 
     expr_dir = '../expriments/VPoser/smpl/pytorch/0020_06_amass'
-    sample_vposer(expr_dir, 5, save_samples=True)
+    sample_vposer(expr_dir, 5)
