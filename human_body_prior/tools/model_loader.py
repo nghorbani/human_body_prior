@@ -24,28 +24,28 @@ import os
 import numpy as np
 
 
-def expid2model(exp_dir, model_type):
+def expid2model(expr_dir, model_type):
     from configer import Configer
     import os, glob
 
-    if not os.path.exists(exp_dir): raise ValueError('Could not find the experiment directory: %s' % exp_dir)
+    if not os.path.exists(expr_dir): raise ValueError('Could not find the experiment directory: %s' % expr_dir)
 
-    trained_model_fname = sorted(glob.glob(os.path.join(exp_dir, 'snapshots', '*.pt')), key=os.path.getmtime)[-1]
+    trained_model_fname = sorted(glob.glob(os.path.join(expr_dir, 'snapshots', '*.pt')), key=os.path.getmtime)[-1]
     try_num = os.path.basename(trained_model_fname).split('_')[0]
 
     print(('Found Trained Model: %s' % trained_model_fname))
 
-    default_ps_fname = os.path.join(exp_dir, '%s_vposer_%s_settings.ini' % (try_num, model_type.replace('_left', '').replace('_right', '')))
+    default_ps_fname = os.path.join(expr_dir, '%s_vposer_%s_settings.ini' % (try_num, model_type.replace('_left', '').replace('_right', '')))
     if not os.path.exists(
         default_ps_fname): raise ValueError('Could not find the appropriate vposer_settings: %s' % default_ps_fname)
-    ps = Configer(default_ps_fname=default_ps_fname, work_dir = exp_dir)
+    ps = Configer(default_ps_fname=default_ps_fname, work_dir = expr_dir)
 
     return ps, trained_model_fname
 
-def load_vposer(exp_dir, model_type='smpl', use_snapshot_model = False):
+def load_vposer(expr_dir, model_type='smpl', use_snapshot_model = False):
     '''
 
-    :param exp_dir:
+    :param expr_dir:
     :param model_type: mano/smpl
     :param if True will load the model definition used for training, and not the one in current repository
     :return:
@@ -54,10 +54,10 @@ def load_vposer(exp_dir, model_type='smpl', use_snapshot_model = False):
     import os
     import torch
 
-    ps, trained_model_fname = expid2model(exp_dir, model_type=model_type)
+    ps, trained_model_fname = expid2model(expr_dir, model_type=model_type)
     if use_snapshot_model:
 
-        vposer_path = os.path.join(exp_dir, 'vposer_%s_pt.py'%model_type.replace('_left','').replace('_right',''))
+        vposer_path = os.path.join(expr_dir, 'vposer_%s_pt.py'%model_type.replace('_left','').replace('_right',''))
 
         spec = importlib.util.spec_from_file_location('VPoser', vposer_path)
         module = importlib.util.module_from_spec(spec)
