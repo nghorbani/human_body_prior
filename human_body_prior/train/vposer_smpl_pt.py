@@ -43,7 +43,7 @@ from configer import Configer
 
 from human_body_prior.tools.omni_tools import copy2cpu as c2c
 import torchgeometry as tgm
-
+from human_body_prior.tools.omni_tools import makepath
 
 class ContinousRotReprDecoder(nn.Module):
     def __init__(self):
@@ -62,14 +62,14 @@ class ContinousRotReprDecoder(nn.Module):
 
 
 class VPoser(nn.Module):
+    NUM_JOINTS = 21
     def __init__(self, num_neurons, latentD, data_shape, use_cont_repr=True):
         super(VPoser, self).__init__()
 
         self.latentD = latentD
-        self.data_shape = data_shape
         self.use_cont_repr = use_cont_repr
 
-        n_features = np.prod(data_shape)
+        n_features = np.prod([1, VPoser.NUM_JOINTS, 9])
 
         self.bodyprior_enc_fc1 = nn.Linear(n_features, num_neurons)
         self.bodyprior_enc_fc2 = nn.Linear(num_neurons, num_neurons)
@@ -79,7 +79,7 @@ class VPoser(nn.Module):
 
         if use_cont_repr:
             rot_dim = 3
-            n_features = data_shape[1] * (rot_dim ** 2 - rot_dim)
+            n_features = int(VPoser.NUM_JOINTS) * (rot_dim ** 2 - rot_dim)
 
         self.bodyprior_dec_fc1 = nn.Linear(latentD, num_neurons)
         self.bodyprior_dec_fc2 = nn.Linear(num_neurons, num_neurons)
@@ -115,8 +115,8 @@ class VPoser(nn.Module):
         else:
             Xout = torch.tanh(Xout)
 
-        if output_type == 'aa': return VPoser.matrot2aa(Xout.view([-1] + self.data_shape))
-        return Xout.view([-1] + self.data_shape)
+        if output_type == 'aa': return VPoser.matrot2aa(Xout.view([-1, 1, VPoser.NUM_JOINTS, 9]))
+        return Xout.view([-1, 1, VPoser.NUM_JOINTS, 9])
 
     def forward(self, Pin, input_type='matrot', output_type='matrot'):
         '''
@@ -131,7 +131,7 @@ class VPoser(nn.Module):
         q_z = self.encode(Pin)
         q_z_sample = q_z.rsample()
         Prec = self.decode(q_z_sample)
-        if output_type == 'aa': Prec = VPoser.matrot2aa(Prec.view([-1] + self.data_shape))
+        if output_type == 'aa': Prec = VPoser.matrot2aa(Prec)
         return Prec, q_z
 
     def sample_poses(self, num_poses, output_type='aa', seed=None):
@@ -168,7 +168,7 @@ class VPoser(nn.Module):
 class vposer_trainer:
 
     def __init__(self, work_dir, ps):
-        from human_body_prior.data.body_dataloader import AMASSDataset
+        from human_body_prior.data.dataloader import AMASSDataset
         from torch.utils.data import DataLoader
         from tensorboardX import SummaryWriter
 
@@ -206,8 +206,8 @@ class vposer_trainer:
         #     bm = BodyModel(model_pklpath=ps.ip_bmodel, model_type=ps.model_type, batch_size=ps.batch_size).to('cuda')
         #     self.body_interpenetration = BodyInterpenetration(bm)
 
-        kwargs = {'num_workers': ps.n_workers}
-        # kwargs = {'num_workers': ps.n_workers, 'pin_memory': True} if use_cuda else {'num_workers': ps.n_workers}
+        # kwargs = {'num_workers': ps.n_workers}
+        kwargs = {'num_workers': ps.n_workers, 'pin_memory': True} if use_cuda else {'num_workers': ps.n_workers}
         ds_train = AMASSDataset(dataset_dir=os.path.join(ps.dataset_dir, 'train'))
         self.ds_train = DataLoader(ds_train, batch_size=ps.batch_size, shuffle=True, drop_last=True, **kwargs)
         ds_val = AMASSDataset(dataset_dir=os.path.join(ps.dataset_dir, 'vald'))
@@ -215,8 +215,7 @@ class vposer_trainer:
         logger('Train dataset size %.2f M' % (len(self.ds_train.dataset)*1e-6))
         logger('Validation dataset size %d' % len(self.ds_val.dataset))
 
-        # remove root and hands for compatibility with smplh
-        ps.data_shape = list(ds_val[0]['pose'][:, 1:22].shape)  # Todo: keep tilt while removing root orientation. remove hands for compatibility with smplh
+        ps.data_shape = list(ds_val[0]['pose_matrot'].shape)
         self.vposer_model = VPoser(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape=ps.data_shape,
                                    use_cont_repr=ps.use_cont_repr).to(self.comp_device)
 
@@ -239,8 +238,20 @@ class vposer_trainer:
         self.ps = ps
 
         chose_ids = np.random.choice(list(range(len(ds_val))), size=ps.num_bodies_to_display, replace=False, p=None)
-        # remove root and hands for compatibility with smplh
-        self.vis_porig = torch.stack([ds_val.fetch_data(idx, output_type='aa')['pose'][:, 1:22] for idx in chose_ids]).to(self.comp_device)
+        data_all = {}
+        for id in chose_ids:
+            for k, v in ds_val[id].items():
+                if k in data_all.keys():
+                    data_all[k] = torch.cat([data_all[k], v[np.newaxis]], dim=0)
+                else:
+                    data_all[k] = v[np.newaxis]
+
+        self.vis_porig = {k: data_all[k].to(self.comp_device) for k in data_all.keys()}
+
+        from human_body_prior.body_model.body_model import BodyModel
+        bm_path = '/ps/project/common/moshpp/smplh/locked_head/female/model.npz'
+        self.bm = BodyModel(bm_path, 'smplh', num_betas=16).to(self.comp_device)
+
         # self.swriter.add_graph(self.vposer_model, self.vis_porig, True)
 
     def train(self):
@@ -249,7 +260,7 @@ class vposer_trainer:
         train_loss_dict = {}
         for it, data in enumerate(self.ds_train):
 
-            porig = data['pose'][:, :, 1:22].to(self.comp_device)  # remove root orientations and hands
+            porig = data['pose_matrot'].to(self.comp_device)#.view(-1,1,22,9)#[:, :, 1:22].to(self.comp_device)  # remove root orientations and fingers
             self.optimizer.zero_grad()
             prec, q_z = self.vposer_model(porig, input_type='matrot', output_type='matrot')
             loss_total, cur_loss_dict = self.compute_loss(porig, prec, q_z)
@@ -274,7 +285,7 @@ class vposer_trainer:
         eval_loss_dict = {}
         with torch.no_grad():
             for data in self.ds_val:
-                porig = data['pose'][:, :, 1:22].to(self.comp_device)  # remove root orientations and hands
+                porig = data['pose_matrot'].to(self.comp_device)  # remove root orientations and fingers
                 prec, q_z = self.vposer_model(porig, input_type='matrot', output_type='matrot')
                 _, cur_loss_dict = self.compute_loss(porig, prec, q_z)
                 eval_loss_dict = {k: eval_loss_dict.get(k, 0.0) + v.item() for k, v in cur_loss_dict.items()}
@@ -283,7 +294,7 @@ class vposer_trainer:
         return eval_loss_dict
 
     def compute_loss(self, porig, prec, q_z):
-        n_joints = porig.size(2)
+        n_joints = VPoser.NUM_JOINTS
         batch_size = porig.size(0)
         device = porig.device
         dtype = porig.dtype
@@ -326,20 +337,6 @@ class vposer_trainer:
 
         return loss_total, loss_dict
 
-    @staticmethod
-    def data_parallel(module, input, device_ids, output_device=None):
-        if not device_ids:
-            return module(input)
-
-        if output_device is None:
-            output_device = device_ids[0]
-
-        replicas = nn.parallel.replicate(module, device_ids)
-        inputs = nn.parallel.scatter(input, device_ids)
-        replicas = replicas[:len(inputs)]
-        outputs = nn.parallel.parallel_apply(replicas, inputs)
-        return nn.parallel.gather(outputs, output_device)
-
     def perform_training(self, num_epochs=None, message=None):
         starttime = datetime.now().replace(microsecond=0)
         if num_epochs is None: num_epochs = self.ps.num_epochs
@@ -373,8 +370,7 @@ class vposer_trainer:
 
                     imgname = '[%s]_TR%02d_E%03d.png' % (self.ps.expr_code, self.try_num, self.epochs_completed)
                     imgpath = os.path.join(self.ps.work_dir, 'images', imgname)
-                    vposer_trainer.vis_results(self.vis_porig, self.vposer_model, imgpath=imgpath,
-                                               model_type=self.ps.model_type)
+                    vposer_trainer.vis_results(self.vis_porig, self.vposer_model, imgpath=imgpath, bm=self.bm)
 
                 else:
                     self.logger(eval_msg)
@@ -404,37 +400,34 @@ class vposer_trainer:
         expr_code, try_num, epoch_num, it, mode, loss_dict['loss_total'], ext_msg)
 
     @staticmethod
-    def vis_results(porig, vposer_model, imgpath, model_type='smpl'):
-        from human_body_prior.tools.viz_tools import imagearray2file, vis_smpl_params
+    def vis_results(dorig, vposer_model, imgpath, bm):
+        from human_body_prior.tools.visualization_tools import render_smpl_params, imagearray2file
+        from human_body_prior.train.vposer_smpl_pt import VPoser
 
-        num_bodies_to_display = porig.size(0)
+        num_bodies_to_display = dorig['pose_aa'].size(0)
         with torch.no_grad():
-            pgen = vposer_model.sample_poses(num_poses=num_bodies_to_display)
-            prec, q_z = vposer_model(porig, input_type='aa', output_type='aa')
+            porig_aa = dorig['pose_aa']#.view([-1,1, VPoser.NUM_JOINTS, 3])
 
-            root_orient = np.zeros([num_bodies_to_display,1, 1, 3])
-            hands = np.zeros([num_bodies_to_display, 1, 30, 3])
+            prec_aa, q_z = vposer_model(porig_aa, input_type='aa', output_type='aa')
+            pgen_aa = vposer_model.sample_poses(num_poses=num_bodies_to_display, output_type='aa')
 
-            porig_full = np.concatenate([root_orient, c2c(porig), hands], axis=2)
+            img_orig = render_smpl_params(bm, pose_body=porig_aa)
+            img_rec = render_smpl_params(bm,  pose_body=prec_aa)
+            img_gen = render_smpl_params(bm,  pose_body=pgen_aa)
 
-            prec_full = np.concatenate([root_orient, c2c(prec), hands], axis=2)
-            pgen_full = np.concatenate([root_orient, c2c(pgen), hands], axis=2)
-# Todo Fix it
-            img_orig = vis_smpl_params(porig_full, model_type=model_type, add_root=False)
-            img_rec = vis_smpl_params(prec_full, model_type=model_type, add_root=False)
-            img_gen = vis_smpl_params(pgen_full, model_type=model_type, add_root=False)
-
-            imagearray2file([img_orig, img_rec, img_gen], imgpath)
+            img_array = np.array([img_orig, img_rec, img_gen])
+            img_array = img_array.reshape([3,num_bodies_to_display,1,400,400,3])
+            imagearray2file(img_array, imgpath)
 
 
 if __name__ == '__main__':
 
-    expr_code = '0020_06_amass_WO_CMU'
+    expr_code = '0020_06_cmu_T3'
     model_type = 'smpl'
 
     default_ps_fname = 'vposer_defaults.ini'
 
-    base_dir = '~/HBPrior'
+    base_dir = '/ps/project/smplbodyprior/BodyPrior'
 
     work_dir = os.path.join(base_dir, 'VPoser', model_type, 'pytorch', expr_code)
 
@@ -463,7 +456,7 @@ if __name__ == '__main__':
         'expr_code': expr_code,
         'work_dir': work_dir,
         'num_epochs': 180,
-        'dataset_dir': '/ps/project/smplbodyprior/BodyPrior/VPoser/data/20190313_amass_WO_CMU/smpl/pytorch',
+        'dataset_dir': '/ps/project/smplbodyprior/BodyPrior/VPoser/data/0020_06_cmu_T3/smpl/pytorch/final_data',
     }
 
     vp_trainer = vposer_trainer(work_dir, ps=Configer(default_ps_fname=default_ps_fname, **params))
@@ -476,7 +469,7 @@ if __name__ == '__main__':
     expr_message += 'Using [On the Continuity of Rotation Representations in Neural Networks]\n'
     expr_message += 'removing hand joints to be compatible with SMPLH\n'
     expr_message += 'lower KL\n'
-    expr_message += 'Trained on amass\n'
+    expr_message += 'Trained on CMU with faster dataloader\n'
     expr_message += '\n'
 
     vp_trainer.logger(expr_message)

@@ -29,13 +29,13 @@ import numpy as np
 import os
 
 def dump_vposer_samples(pose_body, out_imgpath, save_obj=True):
-    from human_body_prior.tools.viz_tools import vis_smpl_params, imagearray2file, smpl_params2ply
+    from human_body_prior.tools.visualization_tools import render_smpl_params, imagearray2file, smpl_params2ply
     from human_body_prior.tools.omni_tools import makepath
     from human_body_prior.body_model.body_model import BodyModel
     bm_path = '/ps/project/common/moshpp/smpl/locked_head/male/model.npz'
     bm = BodyModel(bm_path, 'smpl')
 
-    imgs = vis_smpl_params(bm, pose_body=pose_body)
+    imgs = render_smpl_params(bm, pose_body=pose_body)
     imagearray2file(imgs.reshape(1, -1, 1, 400, 400, 3), out_imgpath)
 
     np.savez(out_imgpath.replace('.png', '.npz'), pose=pose_body)

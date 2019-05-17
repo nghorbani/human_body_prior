@@ -45,8 +45,8 @@ def smpl_params2ply(bm, out_dir, pose_body, pose_hand = None, trans=None, betas=
     for fIdx in range(0, len(pose_body)):
 
         bm.pose_body.data[0,:] = bm.pose_body.new(pose_body[fIdx].reshape(1,-1))
-        if pose_hand is not None: bm.pose_hand.data[0,:] = bm.pose_hand.new(pose_hand[fIdx])
-        if trans is not None: bm.trans.data[0,:] = bm.trans.new(trans[fIdx])
+        if pose_hand is not None: bm.pose_hand.data[0,:] = bm.pose_hand.new(pose_hand[fIdx].reshape(1,-1))
+        if trans is not None: bm.trans.data[0,:] = bm.trans.new(trans[fIdx].reshape(1,-1))
         if betas is not None: bm.betas.data[0,:len(betas[fIdx])] = bm.betas.new(betas[fIdx])
         if root_orient is not None: bm.root_orient.data[0,:] = bm.root_orient.new(root_orient[fIdx])
 
@@ -56,10 +56,10 @@ def smpl_params2ply(bm, out_dir, pose_body, pose_hand = None, trans=None, betas=
         mesh.export(os.path.join(out_dir, '%03d.ply' % fIdx))
 
 
-def vis_smpl_params(bm, pose_body, pose_hand = None, trans=None, betas=None, root_orient=None):
+def render_smpl_params(bm, pose_body, pose_hand = None, trans=None, betas=None, root_orient=None):
     '''
     :param bm: pytorch body model with batch_size 1
-    :param pose_body: Nx1x21x3
+    :param pose_body: Nx21x3
     :param trans: Nx3
     :param betas: Nxnum_betas
     :return: N x 400 x 400 x 3

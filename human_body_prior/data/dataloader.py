@@ -26,35 +26,28 @@ import os
 import torch
 from torch.utils.data import Dataset
 import torchgeometry as tgm
+import glob
 
 class AMASSDataset(Dataset):
     """AMASS: a pytorch loader for unified human motion capture dataset. http://amass.is.tue.mpg.de/"""
 
-    def __init__(self, dataset_dir, output_type='matrot', dtype=torch.float32):
-        # Todo add gender
-        self.ds = {'pose':torch.load(os.path.join(dataset_dir, 'data_pose.pt')),
-                   'shape': torch.load(os.path.join(dataset_dir, 'data_shape.pt')),
-                   }
-        self.dtype = dtype
-        self.output_type = output_type
+    def __init__(self, dataset_dir):
 
+        self.ds = {}
+        for data_fname in glob.glob(os.path.join(dataset_dir, '*.pt')):
+            k = os.path.basename(data_fname).replace('.pt','')
+            self.ds[k] = torch.load(data_fname)
     def __len__(self):
-       return len(self.ds['pose'])
+       return len(self.ds['trans'])
 
     def __getitem__(self, idx):
-        return self.fetch_data(idx, self.output_type)
+        return self.fetch_data(idx)
 
-    def fetch_data(self, idx, output_type='matrot'):
-        pose = self.ds['pose'][idx]
-        if output_type == 'matrot':
-            pose = tgm.angle_axis_to_rotation_matrix(pose.view(-1, 3))[:, :3, :3].contiguous().view(1, -1, 9)
-        else:
-            pose = pose.view(1, -1, 3)
-
-        sample = {'pose': pose.type(self.dtype),
-                  'shape': self.ds['shape'][idx].type(self.dtype),
-                  }
-        return sample
+    def fetch_data(self, idx):
+        data = {k: self.ds[k][idx] for k in self.ds.keys()}
+        data['pose_aa'] = data['pose_aa'].view(1,52,3)[:,1:22]
+        data['pose_matrot'] = data['pose_matrot'].view(1,52,9)[:,1:22]
+        return data
 
 if __name__ == '__main__':
 
@@ -64,8 +57,8 @@ if __name__ == '__main__':
     import trimesh
 
     batch_size = 10
-    ds_dir = '/ps/project/smplbodyprior/BodyPrior/VPoser/data/20190313_cmu/smpl/pytorch/vald'
-    ds = AMASSDataset(dataset_dir=ds_dir, dtype=torch.float32, output_type='aa')
+    ds_dir = '/ps/project/smplbodyprior/BodyPrior/VPoser/data/20190313_cmu_T3/smpl/pytorch/final_data/vald'
+    ds = AMASSDataset(dataset_dir=ds_dir)
     print(len(ds))
 
     dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True, num_workers=5)
@@ -75,7 +68,7 @@ if __name__ == '__main__':
 
     for i_batch, sample_batched in enumerate(dataloader):
 
-        vertices = c2c(bm.forward(pose_body=sample_batched['pose'][:,0,1:22].view(-1,63), betas=sample_batched['shape'][:,:10]).v)[1]
+        vertices = c2c(bm.forward(pose_body=sample_batched['pose_aa'], betas=sample_batched['betas'][:,:10]).v)[1]
         faces = c2c(bm.f)
 
         mesh = trimesh.base.Trimesh(vertices, faces).show()
