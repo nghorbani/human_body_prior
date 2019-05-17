@@ -21,7 +21,6 @@
 # 2018.01.02
 
 import os
-
 import numpy as np
 
 
@@ -78,11 +77,11 @@ def load_vposer(exp_dir, model_type='smpl', use_snapshot_model = False):
     return vposer_pt, ps
 
 
-def extract_weights_asnumpy(exp_id, model_type='smpl'):
+def extract_weights_asnumpy(exp_id, model_type='smpl', use_snapshot_model= False):
     from human_body_prior.tools.omni_tools import makepath
     from human_body_prior.tools.omni_tools import copy2cpu as c2c
 
-    vposer_pt, vposer_ps = load_vposer(exp_id, model_type=model_type)
+    vposer_pt, vposer_ps = load_vposer(exp_id, model_type=model_type, use_snapshot_model=use_snapshot_model)
 
     save_wt_dir = makepath(os.path.join(vposer_ps.work_dir, 'weights_npy'))
 
@@ -96,7 +95,7 @@ def extract_weights_asnumpy(exp_id, model_type='smpl'):
 
 if __name__ == '__main__':
     from human_body_prior.tools.omni_tools import copy2cpu as c2c
-    expr_dir = '../expriments/VPoser/smpl/pytorch/0020_06_amass'
+    expr_dir = '/ps/project/humanbodyprior/BodyPrior/VPoser/smpl/pytorch/0020_06_amass'
     vposer_pt, ps = load_vposer(expr_dir, model_type='smpl', use_snapshot_model=False)
     pose = c2c(vposer_pt.sample_poses(10, seed=100)[0,0])
     print(pose.shape)

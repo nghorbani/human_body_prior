@@ -68,5 +68,5 @@ def sample_vposer(exp_dir, num_samples=5, use_snapshot_model=True):
 
 if __name__ == '__main__':
 
-    expr_dir = '../expriments/VPoser/smpl/pytorch/0020_06_amass'
+    expr_dir = '/ps/project/humanbodyprior/BodyPrior/VPoser/smpl/pytorch/0020_06_amass'
     sample_vposer(expr_dir, 5, use_snapshot_model=False)
