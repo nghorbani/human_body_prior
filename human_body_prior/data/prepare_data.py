@@ -26,7 +26,7 @@ import os
 import numpy as np
 from human_body_prior.tools.omni_tools import makepath, log2file
 from human_body_prior.tools.omni_tools import euler2em, em2euler
-from human_body_prior.train.train_vposer_smpl import VPoser
+from human_body_prior.train.vposer_smpl import VPoser
 import shutil, sys
 from torch.utils.data import Dataset
 
@@ -201,7 +201,7 @@ if __name__ == '__main__':
     prior_type = 'VPoser'
 
     amass_dir = '/ps/project/amass/20190313/unified_results'
-    vposer_datadir = makepath('/ps/project/smplbodyprior/BodyPrior/%s/data/0020_06_cmu_T3/%s/%s' % (prior_type, model_type, dumpmode))
+    vposer_datadir = makepath('/ps/project/humanbodyprior/BodyPrior/%s/data/0020_06_cmu_T3/%s/%s' % (prior_type, model_type, dumpmode))
 
     starttime = datetime.now().replace(microsecond=0)
     log_name = datetime.strftime(starttime, '%Y%m%d_%H%M')

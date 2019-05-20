@@ -402,7 +402,7 @@ class vposer_trainer:
     @staticmethod
     def vis_results(dorig, vposer_model, imgpath, bm):
         from human_body_prior.tools.visualization_tools import render_smpl_params, imagearray2file
-        from human_body_prior.train.train_vposer_smpl import VPoser
+        from human_body_prior.train.vposer_smpl import VPoser
 
         num_bodies_to_display = dorig['pose_aa'].size(0)
         with torch.no_grad():
@@ -425,9 +425,9 @@ if __name__ == '__main__':
     expr_code = '0020_06_cmu_T3'
     model_type = 'smpl'
 
-    default_ps_fname = 'vposer_defaults.ini'
+    default_ps_fname = 'vposer_smpl_settings.ini'
 
-    base_dir = '/ps/project/smplbodyprior/BodyPrior'
+    base_dir = '/ps/project/humanbodyprior/BodyPrior'
 
     work_dir = os.path.join(base_dir, 'VPoser', model_type, 'pytorch', expr_code)
 
@@ -456,7 +456,7 @@ if __name__ == '__main__':
         'expr_code': expr_code,
         'work_dir': work_dir,
         'num_epochs': 180,
-        'dataset_dir': '/ps/project/smplbodyprior/BodyPrior/VPoser/data/0020_06_cmu_T3/smpl/pytorch/final_data',
+        'dataset_dir': '/ps/project/humanbodyprior/BodyPrior/VPoser/data/0020_06_cmu_T3/smpl/pytorch/final_data',
     }
 
     vp_trainer = vposer_trainer(work_dir, ps=Configer(default_ps_fname=default_ps_fname, **params))

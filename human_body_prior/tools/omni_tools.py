@@ -37,6 +37,7 @@ colors = {
     'blue': [.0, .0, 1.],
 
     'offwhite': [.8, .9, .9],
+    'white': [1., 1., 1.],
     'orange': [.5, .65, .9],
 
     'grey': [.7, .7, .7],
@@ -142,3 +143,13 @@ def euler2em(ea):
     from transforms3d.euler import euler2axangle
     axis, theta = euler2axangle(*ea)
     return np.array(axis*theta)
+
+def apply_mesh_tranfsormations_(meshes, transf):
+    '''
+    apply inplace translations to meshes
+    :param meshes: list of trimesh meshes
+    :param transf:
+    :return:
+    '''
+    for i in range(len(meshes)):
+        meshes[i] = meshes[i].apply_transform(transf)

@@ -24,8 +24,8 @@
 
 import unittest
 
-from models.vposer_smpl_pt import VPoser
-from tools.omni_tools import copy2cpu as c2c
+from human_body_prior.train.vposer_smpl import VPoser
+from human_body_prior.tools.omni_tools import copy2cpu as c2c
 from configer import Configer
 
 import numpy as np
@@ -37,7 +37,7 @@ class TestDistances(unittest.TestCase):
 
     def test_samples(self):
         ''' given the same network weights, the random pose generator must produce the same pose for a seed'''
-        ps = Configer(default_ps_fname='../models/vposer_defaults.ini')
+        ps = Configer(default_ps_fname='../human_body_prior/train/vposer_smpl_defaults.ini')
         vposer = VPoser(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape = ps.data_shape)
         body_pose_rnd = vposer.sample_poses(num_poses=1, seed=100)
 

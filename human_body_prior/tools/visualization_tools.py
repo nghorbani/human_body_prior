@@ -67,8 +67,12 @@ def render_smpl_params(bm, pose_body, pose_hand = None, trans=None, betas=None, 
 
     from human_body_prior.tools.omni_tools import copy2cpu as c2c
     from human_body_prior.tools.omni_tools import colors
-    from imageio import imread
+    from human_body_prior.mesh.mesh_viewer import MeshViewer
     faces = c2c(bm.f)
+
+    imw, imh = 400, 400
+
+    mv = MeshViewer(width=imw, height=imh, use_offscreen=True)
 
     images = []
     for fIdx in range(0, len(pose_body)):
@@ -82,21 +86,15 @@ def render_smpl_params(bm, pose_body, pose_hand = None, trans=None, betas=None, 
         v = c2c(bm.forward().v)[0]
 
         mesh = trimesh.base.Trimesh(v, faces, vertex_colors=np.ones_like(v)*colors['grey'])
+        mv.set_meshes([mesh], 'static')
 
-        scene = mesh.scene()
+        images.append(mv.render())
 
-        camera, _geometry = scene.graph[scene.camera.name]
-
-        scene.graph[scene.camera.name] = camera
-        img = imread(scene.save_image(resolution=[400, 400], visible=True))[:,:,:3]
-
-        images.append(img)
-
-    return np.array(images).reshape(len(pose_body), 400, 400, 3)
+    return np.array(images).reshape(len(pose_body), imw, imh, 3)
 
 def imagearray2file(img_array, outpath=None, fps=30):
     '''
-    :param nparray: np array R*C*T*400*400*3 or list of length R
+    :param nparray: RxCxTxwidthxheightx3
     :param outpath: the directory where T images will be dumped for each time point in range T
     :param fps: fps of the gif file
     :return:
@@ -109,9 +107,8 @@ def imagearray2file(img_array, outpath=None, fps=30):
 
     makepath(outpath, isfile=True)
 
-    if not isinstance(img_array, np.ndarray):img_array = np.array(img_array)
-
-    if img_array.ndim < 6: img_array = img_array[:,np.newaxis]#.expand_dims(axis=1)
+    if not isinstance(img_array, np.ndarray) or img_array.ndim < 6:
+        raise ValueError('img_array should be a numpy array of shape RxCxTxwidthxheightx3')
 
     R, C, T, img_h, img_w, img_c = img_array.shape
 

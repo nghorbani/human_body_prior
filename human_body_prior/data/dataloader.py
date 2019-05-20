@@ -57,7 +57,7 @@ if __name__ == '__main__':
     import trimesh
 
     batch_size = 10
-    ds_dir = '/ps/project/smplbodyprior/BodyPrior/VPoser/data/20190313_cmu_T3/smpl/pytorch/final_data/vald'
+    ds_dir = '/ps/project/humanbodyprior/BodyPrior/VPoser/data/20190313_cmu_T3/smpl/pytorch/final_data/vald'
     ds = AMASSDataset(dataset_dir=ds_dir)
     print(len(ds))
 

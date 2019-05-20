@@ -35,7 +35,8 @@ def expid2model(expr_dir, model_type):
 
     print(('Found Trained Model: %s' % trained_model_fname))
 
-    default_ps_fname = os.path.join(expr_dir, '%s_vposer_%s_settings.ini' % (try_num, model_type.replace('_left', '').replace('_right', '')))
+    default_ps_fname = glob.glob(os.path.join(expr_dir,'*.ini'))[0]
+    # default_ps_fname = os.path.join(expr_dir, '%s_vposer_%s_defaults.ini' % (try_num, model_type.replace('_left', '').replace('_right', '')))
     if not os.path.exists(
         default_ps_fname): raise ValueError('Could not find the appropriate vposer_settings: %s' % default_ps_fname)
     ps = Configer(default_ps_fname=default_ps_fname, work_dir = expr_dir)
@@ -66,7 +67,7 @@ def load_vposer(expr_dir, model_type='smpl', use_snapshot_model = False):
         vposer_pt = getattr(module, 'VPoser')(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape=ps.data_shape)
     else:
         if model_type == 'smpl':
-            from human_body_prior.train.train_vposer_smpl import VPoser
+            from human_body_prior.train.vposer_smpl import VPoser
         else:
             raise NotImplementedError
         vposer_pt = VPoser(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape=ps.data_shape)

@@ -25,18 +25,41 @@
 __all__ = ['sample_vposer']
 
 import numpy as np
-
+from human_body_prior.tools.omni_tools import apply_mesh_tranfsormations_
 import os
+import trimesh
+from human_body_prior.tools.omni_tools import copy2cpu as c2c
+from human_body_prior.tools.omni_tools import colors
 
 def dump_vposer_samples(pose_body, out_imgpath, save_obj=True):
-    from human_body_prior.tools.visualization_tools import render_smpl_params, imagearray2file, smpl_params2ply
+    from human_body_prior.tools.visualization_tools import imagearray2file, smpl_params2ply
     from human_body_prior.tools.omni_tools import makepath
     from human_body_prior.body_model.body_model import BodyModel
+    from human_body_prior.mesh.mesh_viewer import MeshViewer
+
     bm_path = '/ps/project/common/moshpp/smpl/locked_head/male/model.npz'
     bm = BodyModel(bm_path, 'smpl')
 
-    imgs = render_smpl_params(bm, pose_body=pose_body)
-    imagearray2file(imgs.reshape(1, -1, 1, 400, 400, 3), out_imgpath)
+    view_angles = [0, 90, -90]
+    imw, imh = 400,400
+    mv = MeshViewer(width=imw, height=imh, use_offscreen=True)
+
+    images = np.zeros([len(view_angles), len(pose_body),1, imw, imh, 3])
+    for cId in range(0, len(pose_body)):
+
+        bm.pose_body.data[:] = bm.pose_body.new(pose_body[cId].reshape(-1))
+
+        body_mesh = trimesh.Trimesh(vertices=c2c(bm().v[0]), faces=c2c(bm.f), vertex_colors=np.tile(colors['grey'], (6890, 1)))
+
+        for rId, angle in enumerate(view_angles):
+            apply_mesh_tranfsormations_([body_mesh],
+                                        trimesh.transformations.rotation_matrix(np.radians(angle), (0, 1, 0)))
+            mv.set_meshes([body_mesh], group_name='static')
+            images[rId, cId,0] = mv.render()
+            apply_mesh_tranfsormations_([body_mesh],
+                                        trimesh.transformations.rotation_matrix(np.radians(-angle), (0, 1, 0)))
+
+    imagearray2file(images, out_imgpath)
 
     np.savez(out_imgpath.replace('.png', '.npz'), pose=pose_body)
 
@@ -68,5 +91,5 @@ def sample_vposer(expr_dir, num_samples=5, use_snapshot_model=True):
 
 if __name__ == '__main__':
 
-    expr_dir = '/ps/project/humanbodyprior/BodyPrior/VPoser/smpl/pytorch/0020_06_amass'
+    expr_dir = '/ps/project/humanbodyprior/BodyPrior/VPoser/smpl/pytorch/0020_06_cmu_T2'
     sample_vposer(expr_dir, 5, use_snapshot_model=False)
