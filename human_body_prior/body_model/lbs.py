@@ -94,8 +94,11 @@ def lbs(betas, pose, v_template, shapedirs, posedirs, J_regressor, parents,
     pose_feature = (rot_mats[:, 1:, :, :] - ident).view([batch_size, -1])
 
     # (N x P) x (P, V * 3) -> N x V x 3
-    pose_offsets = torch.matmul(pose_feature, posedirs).view(batch_size, -1, 3)
-    v_posed = pose_offsets + v_shaped
+    if posedirs is not None:
+        pose_offsets = torch.matmul(pose_feature, posedirs).view(batch_size, -1, 3)
+        v_posed = pose_offsets + v_shaped
+    else:
+        v_posed = v_shaped
 
     # 4. Get the global joint location
     J_transformed, A = batch_rigid_transform(rot_mats, J, parents, dtype=dtype)
@@ -106,8 +109,7 @@ def lbs(betas, pose, v_template, shapedirs, posedirs, J_regressor, parents,
     # (N x V x (J + 1)) x (N x (J + 1) x 16)
     T = torch.matmul(W, A.view(batch_size, num_joints, 16)).view(batch_size, -1, 4, 4)
 
-    homogen_coord = torch.ones([batch_size, v_posed.shape[1], 1],
-                               dtype=dtype, device=device)
+    homogen_coord = torch.ones([batch_size, v_posed.shape[1], 1], dtype=dtype, device=device)
     v_posed_homo = torch.cat([v_posed, homogen_coord], dim=2)
     v_homo = torch.matmul(T, torch.unsqueeze(v_posed_homo, dim=-1))
 

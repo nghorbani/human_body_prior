@@ -41,6 +41,7 @@ class BodyModel(nn.Module):
                  batch_size = 1,
                  num_dmpls = None, path_dmpl = None,
                  num_expressions = 10,
+                 use_posedirs = True,
                  dtype = torch.float32):
 
         super(BodyModel, self).__init__()
@@ -112,9 +113,12 @@ class BodyModel(nn.Module):
         self.register_buffer('J_regressor', torch.tensor(smpl_dict['J_regressor'], dtype=dtype))
 
         # Pose blend shape basis: 6890 x 3 x 207, reshaped to 6890*30 x 207
-        posedirs = smpl_dict['posedirs']
-        posedirs = posedirs.reshape([posedirs.shape[0] * 3, -1]).T
-        self.register_buffer('posedirs', torch.tensor(posedirs, dtype=dtype))
+        if use_posedirs:
+            posedirs = smpl_dict['posedirs']
+            posedirs = posedirs.reshape([posedirs.shape[0] * 3, -1]).T
+            self.register_buffer('posedirs', torch.tensor(posedirs, dtype=dtype))
+        else:
+            self.posedirs = None
 
         # indices of parents for each joints
         kintree_table = smpl_dict['kintree_table'].astype(np.int32)
