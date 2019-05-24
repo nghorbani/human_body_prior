@@ -44,6 +44,7 @@ from configer import Configer
 from human_body_prior.tools.omni_tools import copy2cpu as c2c
 import torchgeometry as tgm
 from human_body_prior.tools.omni_tools import makepath
+from human_body_prior.body_model.body_model import BodyModel
 
 class ContinousRotReprDecoder(nn.Module):
     def __init__(self):
@@ -62,24 +63,22 @@ class ContinousRotReprDecoder(nn.Module):
 
 
 class VPoser(nn.Module):
-    NUM_JOINTS = 21
     def __init__(self, num_neurons, latentD, data_shape, use_cont_repr=True):
         super(VPoser, self).__init__()
 
         self.latentD = latentD
         self.use_cont_repr = use_cont_repr
 
-        n_features = np.prod([1, VPoser.NUM_JOINTS, 9])
+        n_features = np.prod(data_shape)
+        self.num_joints = data_shape[1]
 
+        self.bodyprior_enc_bn1 = nn.BatchNorm1d(n_features)
         self.bodyprior_enc_fc1 = nn.Linear(n_features, num_neurons)
+        self.bodyprior_enc_bn2 = nn.BatchNorm1d(num_neurons)
         self.bodyprior_enc_fc2 = nn.Linear(num_neurons, num_neurons)
         self.bodyprior_enc_mu = nn.Linear(num_neurons, latentD)
         self.bodyprior_enc_logvar = nn.Linear(num_neurons, latentD)
-        self.dropout = nn.Dropout(p=.25, inplace=False)
-
-        if use_cont_repr:
-            rot_dim = 3
-            n_features = int(VPoser.NUM_JOINTS) * (rot_dim ** 2 - rot_dim)
+        self.dropout = nn.Dropout(p=.1, inplace=False)
 
         self.bodyprior_dec_fc1 = nn.Linear(latentD, num_neurons)
         self.bodyprior_dec_fc2 = nn.Linear(num_neurons, num_neurons)
@@ -87,7 +86,7 @@ class VPoser(nn.Module):
         if self.use_cont_repr:
             self.rot_decoder = ContinousRotReprDecoder()
 
-        self.bodyprior_dec_out = nn.Linear(num_neurons, n_features)
+        self.bodyprior_dec_out = nn.Linear(num_neurons, self.num_joints* 6)
 
     def encode(self, Pin):
         '''
@@ -97,7 +96,10 @@ class VPoser(nn.Module):
         :return:
         '''
         Xout = Pin.view(Pin.size(0), -1)  # flatten input
+        Xout = self.bodyprior_enc_bn1(Xout)
+
         Xout = F.leaky_relu(self.bodyprior_enc_fc1(Xout), negative_slope=.2)
+        Xout = self.bodyprior_enc_bn2(Xout)
         Xout = self.dropout(Xout)
         Xout = F.leaky_relu(self.bodyprior_enc_fc2(Xout), negative_slope=.2)
         return torch.distributions.normal.Normal(self.bodyprior_enc_mu(Xout),
@@ -115,8 +117,9 @@ class VPoser(nn.Module):
         else:
             Xout = torch.tanh(Xout)
 
-        if output_type == 'aa': return VPoser.matrot2aa(Xout.view([-1, 1, VPoser.NUM_JOINTS, 9]))
-        return Xout.view([-1, 1, VPoser.NUM_JOINTS, 9])
+        Xout = Xout.view([-1, 1, self.num_joints, 9])
+        if output_type == 'aa': return VPoser.matrot2aa(Xout)
+        return Xout
 
     def forward(self, Pin, input_type='matrot', output_type='matrot'):
         '''
@@ -127,7 +130,7 @@ class VPoser(nn.Module):
         :return:
         '''
         assert output_type in ['matrot', 'aa']
-        if input_type == 'aa': Pin = VPoser.aa2matrot(Pin)
+        # if input_type == 'aa': Pin = VPoser.aa2matrot(Pin)
         q_z = self.encode(Pin)
         q_z_sample = q_z.rsample()
         Prec = self.decode(q_z_sample)
@@ -151,24 +154,24 @@ class VPoser(nn.Module):
         '''
         batch_size = pose_matrot.size(0)
         homogen_matrot = F.pad(pose_matrot.view(-1, 3, 3), [0,1])
-        pose_aa = tgm.rotation_matrix_to_angle_axis(homogen_matrot).view(batch_size, 1, -1, 3).contiguous()
-        return pose_aa
+        pose = tgm.rotation_matrix_to_angle_axis(homogen_matrot).view(batch_size, 1, -1, 3).contiguous()
+        return pose
 
     @staticmethod
-    def aa2matrot(pose_aa):
+    def aa2matrot(pose):
         '''
         :param Nx1xnum_jointsx3
         :return: pose_matrot: Nx1xnum_jointsx9
         '''
-        batch_size = pose_aa.size(0)
-        pose_body_matrot = tgm.angle_axis_to_rotation_matrix(pose_aa.reshape(-1, 3))[:, :3, :3].contiguous().view(batch_size, 1, -1, 9)
+        batch_size = pose.size(0)
+        pose_body_matrot = tgm.angle_axis_to_rotation_matrix(pose.reshape(-1, 3))[:, :3, :3].contiguous().view(batch_size, 1, -1, 9)
         return pose_body_matrot
 
 
 class vposer_trainer:
 
     def __init__(self, work_dir, ps):
-        from human_body_prior.data.dataloader import AMASSDataset
+        from human_body_prior.data.dataloader import VPoserDS
         from torch.utils.data import DataLoader
         from tensorboardX import SummaryWriter
 
@@ -198,7 +201,8 @@ class vposer_trainer:
         logger('%d CUDAs available!' % torch.cuda.device_count())
 
         gpu_brand= torch.cuda.get_device_name(ps.cuda_id) if use_cuda else None
-        logger('Training on %s [%s]' % (self.comp_device,gpu_brand)  if use_cuda else 'Training on CPU!!!')
+        logger('Training with %s [%s]' % (self.comp_device,gpu_brand)  if use_cuda else 'Training on CPU!!!')
+        logger('Base dataset_dir is %s'%ps.dataset_dir)
 
         # if ps.ip_avoid:
         #     from tools_torch.smpl_pt import BodyInterpenetration
@@ -206,29 +210,32 @@ class vposer_trainer:
         #     bm = BodyModel(model_pklpath=ps.ip_bmodel, model_type=ps.model_type, batch_size=ps.batch_size).to('cuda')
         #     self.body_interpenetration = BodyInterpenetration(bm)
 
-        # kwargs = {'num_workers': ps.n_workers}
-        kwargs = {'num_workers': ps.n_workers, 'pin_memory': True} if use_cuda else {'num_workers': ps.n_workers}
-        ds_train = AMASSDataset(dataset_dir=os.path.join(ps.dataset_dir, 'train'))
+        kwargs = {'num_workers': ps.n_workers}
+        # kwargs = {'num_workers': ps.n_workers, 'pin_memory': True} if use_cuda else {'num_workers': ps.n_workers}
+        ds_train = VPoserDS(dataset_dir=os.path.join(ps.dataset_dir, 'train'))
         self.ds_train = DataLoader(ds_train, batch_size=ps.batch_size, shuffle=True, drop_last=True, **kwargs)
-        ds_val = AMASSDataset(dataset_dir=os.path.join(ps.dataset_dir, 'vald'))
+        ds_val = VPoserDS(dataset_dir=os.path.join(ps.dataset_dir, 'vald'))
         self.ds_val = DataLoader(ds_val, batch_size=ps.batch_size, shuffle=True, drop_last=True, **kwargs)
         logger('Train dataset size %.2f M' % (len(self.ds_train.dataset)*1e-6))
         logger('Validation dataset size %d' % len(self.ds_val.dataset))
 
-        ps.data_shape = list(ds_val[0]['pose_matrot'].shape)
+        ps.data_shape = list(ds_val[0]['pose'].shape)
         self.vposer_model = VPoser(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape=ps.data_shape,
                                    use_cont_repr=ps.use_cont_repr).to(self.comp_device)
 
-        enc_varlist = [var[1] for var in self.vposer_model.named_parameters() if 'bodyprior_enc' in var[0]]
-        dec_varlist = [var[1] for var in self.vposer_model.named_parameters() if 'bodyprior_dec' in var[0]]
+        # enc_varlist = [var[1] for var in self.vposer_model.named_parameters() if 'bodyprior_enc' in var[0]]
+        # dec_varlist = [var[1] for var in self.vposer_model.named_parameters() if 'bodyprior_dec' in var[0]]
+        varlist = [var[1] for var in self.vposer_model.named_parameters()]
 
-        enc_params_count = sum(p.numel() for p in enc_varlist if p.requires_grad)
-        dec_params_count = sum(p.numel() for p in dec_varlist if p.requires_grad)
-        logger('Encoder Trainable Parameters Count %2.2f M and in Decoder: %2.2f M.' % (
-        enc_params_count * 1e-6, dec_params_count * 1e-6,))
-        logger('Total Trainable Parameters Count is %2.2f M.' % ((dec_params_count + enc_params_count) * 1e-6))
+        params_count = sum(p.numel() for p in varlist if p.requires_grad)
+        # enc_params_count = sum(p.numel() for p in enc_varlist if p.requires_grad)
+        # dec_params_count = sum(p.numel() for p in dec_varlist if p.requires_grad)
+        # logger('Encoder Trainable Parameters Count %2.2f M and in Decoder: %2.2f M.' % (
+        # enc_params_count * 1e-6, dec_params_count * 1e-6,))
+        # logger('Total Trainable Parameters Count is %2.2f M.' % ((dec_params_count + enc_params_count) * 1e-6))
+        logger('Total Trainable Parameters Count is %2.2f M.' % ((params_count) * 1e-6))
 
-        self.optimizer = optim.Adam(enc_varlist + dec_varlist, betas=(ps.adam_beta1, 0.999), lr=ps.base_lr, weight_decay=ps.reg_coef)
+        self.optimizer = optim.Adam(varlist, betas=(ps.adam_beta1, 0.999), lr=ps.base_lr, weight_decay=ps.reg_coef)
 
         self.logger = logger
         self.best_loss_total = np.inf
@@ -248,9 +255,8 @@ class vposer_trainer:
 
         self.vis_porig = {k: data_all[k].to(self.comp_device) for k in data_all.keys()}
 
-        from human_body_prior.body_model.body_model import BodyModel
-        bm_path = '/ps/project/common/moshpp/smplh/locked_head/female/model.npz'
-        self.bm = BodyModel(bm_path, 'smplh', num_betas=16).to(self.comp_device)
+        self.bm_path = '/ps/project/common/moshpp/smplh/locked_head/neutral/model.npz'
+        self.bm = BodyModel(self.bm_path, 'smplh', batch_size=self.ps.batch_size, use_posedirs=False).to(self.comp_device)
 
         # self.swriter.add_graph(self.vposer_model, self.vis_porig, True)
 
@@ -260,9 +266,9 @@ class vposer_trainer:
         train_loss_dict = {}
         for it, data in enumerate(self.ds_train):
 
-            porig = data['pose_matrot'].to(self.comp_device)#.view(-1,1,22,9)#[:, :, 1:22].to(self.comp_device)  # remove root orientations and fingers
+            porig = data['pose'].to(self.comp_device)
             self.optimizer.zero_grad()
-            prec, q_z = self.vposer_model(porig, input_type='matrot', output_type='matrot')
+            prec, q_z = self.vposer_model(porig, input_type='aa', output_type='aa')
             loss_total, cur_loss_dict = self.compute_loss(porig, prec, q_z)
             loss_total.backward()
             self.optimizer.step()
@@ -285,8 +291,8 @@ class vposer_trainer:
         eval_loss_dict = {}
         with torch.no_grad():
             for data in self.ds_val:
-                porig = data['pose_matrot'].to(self.comp_device)  # remove root orientations and fingers
-                prec, q_z = self.vposer_model(porig, input_type='matrot', output_type='matrot')
+                porig = data['pose'].to(self.comp_device)
+                prec, q_z = self.vposer_model(porig, input_type='aa', output_type='aa')
                 _, cur_loss_dict = self.compute_loss(porig, prec, q_z)
                 eval_loss_dict = {k: eval_loss_dict.get(k, 0.0) + v.item() for k, v in cur_loss_dict.items()}
 
@@ -294,13 +300,17 @@ class vposer_trainer:
         return eval_loss_dict
 
     def compute_loss(self, porig, prec, q_z):
-        n_joints = VPoser.NUM_JOINTS
         batch_size = porig.size(0)
         device = porig.device
         dtype = porig.dtype
         latentD = q_z.mean.size(1)
+        MESH_SCALER = 1000
 
-        loss_rec = (1. - self.ps.kl_coef) * torch.mean(torch.sum(torch.pow(porig - prec, 2), dim=[1, 2, 3]))
+        #loss_rec = (1. - self.ps.kl_coef) * torch.mean(torch.sum(torch.pow(porig - prec, 2), dim=[1, 2, 3]))
+        mesh_orig = self.bm(pose_body=porig.view(self.ps.batch_size,-1)).v*MESH_SCALER
+        mesh_rec = self.bm(pose_body=prec.view(self.ps.batch_size,-1)).v*MESH_SCALER
+        loss_rec =  (1. - self.ps.kl_coef) * torch.mean(torch.abs(mesh_orig - mesh_rec))
+        # loss_rec =  (1. - self.ps.kl_coef) * torch.mean(torch.sum(torch.pow(mesh_orig - mesh_rec, 2), dim=[1,2]))
 
         p_z = torch.distributions.normal.Normal(
             loc=torch.tensor(np.zeros([batch_size, latentD]), requires_grad=False).to(device).type(dtype),
@@ -323,8 +333,8 @@ class vposer_trainer:
                      # 'loss_det1':loss_det1,
                      }
         if self.ps.ip_avoid:
-            pose_aa = VPoser.matrot2aa(prec).view(batch_size, -1)
-            bm_forwarded = self.body_interpenetration.bm(pose_body=pose_aa)
+            pose = VPoser.matrot2aa(prec).view(batch_size, -1)
+            bm_forwarded = self.body_interpenetration.bm(pose_body=pose)
             loss_dict['loss_ip_rec'] = self.ps.ip_coef * torch.mean(
                 self.body_interpenetration(bm_forwarded=bm_forwarded))
 
@@ -345,6 +355,7 @@ class vposer_trainer:
             'Started Training at %s for %d epochs' % (datetime.strftime(starttime, '%Y-%m-%d_%H:%M:%S'), num_epochs))
         if message is not None: self.logger(expr_message)
 
+        vis_bm =  BodyModel(self.bm_path, 'smplh', num_betas=16).to(self.comp_device)
         prev_lr = np.inf
         scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=int(num_epochs // 3), gamma=0.5)
         for epoch_num in range(1, num_epochs + 1):
@@ -370,7 +381,7 @@ class vposer_trainer:
 
                     imgname = '[%s]_TR%02d_E%03d.png' % (self.ps.expr_code, self.try_num, self.epochs_completed)
                     imgpath = os.path.join(self.ps.work_dir, 'images', imgname)
-                    vposer_trainer.vis_results(self.vis_porig, self.vposer_model, imgpath=imgpath, bm=self.bm)
+                    vposer_trainer.vis_results(self.vis_porig, self.vposer_model, bm=vis_bm, imgpath=imgpath)
 
                 else:
                     self.logger(eval_msg)
@@ -400,18 +411,17 @@ class vposer_trainer:
         expr_code, try_num, epoch_num, it, mode, loss_dict['loss_total'], ext_msg)
 
     @staticmethod
-    def vis_results(dorig, vposer_model, imgpath, bm):
+    def vis_results(dorig, vposer_model, bm, imgpath):
         from human_body_prior.tools.visualization_tools import render_smpl_params, imagearray2file
         from human_body_prior.train.vposer_smpl import VPoser
 
-        num_bodies_to_display = dorig['pose_aa'].size(0)
+        num_bodies_to_display = dorig['pose'].size(0)
         with torch.no_grad():
-            porig_aa = dorig['pose_aa']#.view([-1,1, VPoser.NUM_JOINTS, 3])
 
-            prec_aa, q_z = vposer_model(porig_aa, input_type='aa', output_type='aa')
+            prec_aa, q_z = vposer_model(dorig['pose'], input_type='aa', output_type='aa')
             pgen_aa = vposer_model.sample_poses(num_poses=num_bodies_to_display, output_type='aa')
 
-            img_orig = render_smpl_params(bm, pose_body=porig_aa)
+            img_orig = render_smpl_params(bm, pose_body=dorig['pose'])
             img_rec = render_smpl_params(bm,  pose_body=prec_aa)
             img_gen = render_smpl_params(bm,  pose_body=pgen_aa)
 
@@ -419,30 +429,84 @@ class vposer_trainer:
             img_array = img_array.reshape([3,num_bodies_to_display,1,400,400,3])
             imagearray2file(img_array, imgpath)
 
+    @staticmethod
+    def vis_results(dorig, vposer_model, bm, imgpath):
+        from human_body_prior.mesh import MeshViewer
+        from human_body_prior.tools.omni_tools import copy2cpu as c2c
+        import trimesh
+        from human_body_prior.tools.omni_tools import colors
+        from human_body_prior.tools.omni_tools import apply_mesh_tranfsormations_
+
+        from human_body_prior.tools.visualization_tools import imagearray2file
+        from human_body_prior.train.vposer_smpl import VPoser
+
+        view_angles = [0, 180, 90, -90]
+        imw, imh = 800, 800
+        batch_size = len(dorig['pose'])
+        num_joints = dorig['pose'].shape[2]
+
+        mv = MeshViewer(width=imw, height=imh, use_offscreen=True)
+        mv.render_wireframe = True
+
+        porig_aa = dorig['pose'].view([-1,1, num_joints, 3])
+
+        prec_aa, q_z = vposer_model(porig_aa, input_type='aa', output_type='aa')
+        prec_aa = prec_aa.view(batch_size,-1)
+        pgen_aa = vposer_model.sample_poses(num_poses=batch_size, output_type='aa')
+        pgen_aa = pgen_aa.view(batch_size,-1)
+        porig_aa = porig_aa.view(batch_size, -1)
+
+        images = np.zeros([len(view_angles), batch_size, 1, imw, imh, 3])
+        images_gen = np.zeros([len(view_angles), batch_size, 1, imw, imh, 3])
+        for cId in range(0, batch_size):
+
+            bm.pose_body.data[:] = bm.pose_body.new(porig_aa[cId])
+            orig_body_mesh = trimesh.Trimesh(vertices=c2c(bm().v[0]), faces=c2c(bm.f), vertex_colors=np.tile(colors['grey'], (6890, 1)))
+
+            bm.pose_body.data[:] = bm.pose_body.new(prec_aa[cId])
+            rec_body_mesh = trimesh.Trimesh(vertices=c2c(bm().v[0]), faces=c2c(bm.f), vertex_colors=np.tile(colors['blue'], (6890, 1)))
+
+            bm.pose_body.data[:] = bm.pose_body.new(pgen_aa[cId])
+            gen_body_mesh = trimesh.Trimesh(vertices=c2c(bm().v[0]), faces=c2c(bm.f), vertex_colors=np.tile(colors['blue'], (6890, 1)))
+
+            all_meshes = [orig_body_mesh, rec_body_mesh, gen_body_mesh]
+            # apply_mesh_tranfsormations_(all_meshes, trimesh.transformations.rotation_matrix(np.radians(-90), (1, 0, 0)))
+
+            for rId, angle in enumerate(view_angles):
+                if angle != 0: apply_mesh_tranfsormations_(all_meshes, trimesh.transformations.rotation_matrix(np.radians(angle), (0, 1, 0)))
+                mv.set_meshes([orig_body_mesh, rec_body_mesh], group_name='static')
+                images[rId, cId, 0] = mv.render()
+                mv.set_meshes([gen_body_mesh], group_name='static')
+                images_gen[rId, cId, 0] = mv.render()
+
+                if angle != 0: apply_mesh_tranfsormations_(all_meshes, trimesh.transformations.rotation_matrix(np.radians(-angle), (0, 1, 0)))
+
+        imagearray2file(images, imgpath)
+        imagearray2file(images_gen, imgpath.replace('.png','_gen.png'))
+
 
 if __name__ == '__main__':
 
-    expr_code = '0020_06_cmu_T3'
+    expr_code = '0040_00_cmu_V02'
     model_type = 'smpl'
 
-    default_ps_fname = 'vposer_smpl_settings.ini'
+    default_ps_fname = 'vposer_smpl_defaults.ini'
 
-    base_dir = '/ps/project/humanbodyprior/BodyPrior'
+    base_dir = '/ps/project/humanbodyprior'
 
     work_dir = os.path.join(base_dir, 'VPoser', model_type, 'pytorch', expr_code)
 
     params = {
         'model_type': model_type,
-        'batch_size': 256,
+        'batch_size': 512,
         'latentD': 32,
         'num_neurons': 512,
         'n_workers': 20,
-        'cuda_id':0,
+        'cuda_id':1,
+        'base_lr': 5e-3,
 
         'reg_coef': 5e-4,
         'kl_coef': 5e-3,
-        'ortho_coef': 1.,
-        'det1_coef': 1.,
         'use_cont_repr': True,
 
         'ip_avoid': False,
@@ -455,8 +519,8 @@ if __name__ == '__main__':
         'log_every_epoch': 2,
         'expr_code': expr_code,
         'work_dir': work_dir,
-        'num_epochs': 180,
-        'dataset_dir': '/ps/project/humanbodyprior/BodyPrior/VPoser/data/0020_06_cmu_T3/smpl/pytorch/final_data',
+        'num_epochs': 100,
+        'dataset_dir': '/ps/project/humanbodyprior/VPoser/data/004_00_cmu/smpl/pytorch/final_dsdir',
     }
 
     vp_trainer = vposer_trainer(work_dir, ps=Configer(default_ps_fname=default_ps_fname, **params))
@@ -464,12 +528,12 @@ if __name__ == '__main__':
 
     ps.dump_settings(os.path.join(work_dir, 'TR%02d_%s' % (ps.try_num, os.path.basename(default_ps_fname))))
 
-    expr_message = '[%s] %d H neurons, latentD=%d, batch_size=%d, beta=%.1e,  kl_coef = %.1e\n' \
+    expr_message = '\n[%s] %d H neurons, latentD=%d, batch_size=%d, beta=%.1e,  kl_coef = %.1e\n' \
                    % (ps.expr_code, ps.num_neurons, ps.latentD, ps.batch_size, ps.adam_beta1, ps.kl_coef)
-    expr_message += 'Using [On the Continuity of Rotation Representations in Neural Networks]\n'
-    expr_message += 'removing hand joints to be compatible with SMPLH\n'
-    expr_message += 'lower KL\n'
     expr_message += 'Trained on CMU with faster dataloader\n'
+    expr_message += 'Using SMPL to produce meshes of the bodies\n'
+    expr_message += 'Reconstruction loss is L1 on meshes\n'
+    expr_message += 'Using Batch Normalization\n'
     expr_message += '\n'
 
     vp_trainer.logger(expr_message)
