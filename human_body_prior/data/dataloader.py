@@ -25,10 +25,9 @@
 import os
 import torch
 from torch.utils.data import Dataset
-import torchgeometry as tgm
 import glob
 
-class AMASSDataset(Dataset):
+class VPoserDS(Dataset):
     """AMASS: a pytorch loader for unified human motion capture dataset. http://amass.is.tue.mpg.de/"""
 
     def __init__(self, dataset_dir):
@@ -37,6 +36,7 @@ class AMASSDataset(Dataset):
         for data_fname in glob.glob(os.path.join(dataset_dir, '*.pt')):
             k = os.path.basename(data_fname).replace('.pt','')
             self.ds[k] = torch.load(data_fname)
+
     def __len__(self):
        return len(self.ds['trans'])
 
@@ -45,8 +45,7 @@ class AMASSDataset(Dataset):
 
     def fetch_data(self, idx):
         data = {k: self.ds[k][idx] for k in self.ds.keys()}
-        data['pose_aa'] = data['pose_aa'].view(1,52,3)[:,1:22]
-        data['pose_matrot'] = data['pose_matrot'].view(1,52,9)[:,1:22]
+        data['pose'] = data['pose'].view(1,52,3)[:,1:22]
         return data
 
 if __name__ == '__main__':
@@ -57,8 +56,8 @@ if __name__ == '__main__':
     import trimesh
 
     batch_size = 10
-    ds_dir = '/ps/project/humanbodyprior/BodyPrior/VPoser/data/20190313_cmu_T3/smpl/pytorch/final_data/vald'
-    ds = AMASSDataset(dataset_dir=ds_dir)
+    ds_dir = '/ps/project/humanbodyprior/VPoser/data/20190313_cmu_T3/smpl/pytorch/final_data/vald'
+    ds = VPoserDS(dataset_dir=ds_dir)
     print(len(ds))
 
     dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True, num_workers=5)
