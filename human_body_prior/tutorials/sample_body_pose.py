@@ -91,5 +91,5 @@ def sample_vposer(expr_dir, num_samples=5, use_snapshot_model=True):
 
 if __name__ == '__main__':
 
-    expr_dir = '/ps/project/humanbodyprior/BodyPrior/VPoser/smpl/pytorch/0020_06_cmu_T2'
+    expr_dir = '/ps/project/humanbodyprior/VPoser/smpl/pytorch/0020_06_cmu_T2'
     sample_vposer(expr_dir, 5, use_snapshot_model=False)

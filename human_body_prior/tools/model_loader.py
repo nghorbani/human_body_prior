@@ -96,7 +96,7 @@ def extract_weights_asnumpy(exp_id, model_type='smpl', use_snapshot_model= False
 
 if __name__ == '__main__':
     from human_body_prior.tools.omni_tools import copy2cpu as c2c
-    expr_dir = '/ps/project/humanbodyprior/BodyPrior/VPoser/smpl/pytorch/0020_06_amass'
+    expr_dir = '/ps/project/humanbodyprior/VPoser/smpl/pytorch/0020_06_amass'
     vposer_pt, ps = load_vposer(expr_dir, model_type='smpl', use_snapshot_model=False)
     pose = c2c(vposer_pt.sample_poses(10, seed=100)[0,0])
     print(pose.shape)
