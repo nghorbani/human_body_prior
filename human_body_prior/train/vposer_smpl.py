@@ -239,10 +239,14 @@ class vposer_trainer:
 
         self.logger = logger
         self.best_loss_total = np.inf
-        self.best_model_fname = None
         self.try_num = ps.try_num
         self.epochs_completed = 0
         self.ps = ps
+
+        if ps.best_model_fname is not None:
+            self.supercap_model.load_state_dict(torch.load(ps.best_model_fname, map_location=self.comp_device))
+            logger('Restored model from %s'%ps.best_model_fname)
+
 
         chose_ids = np.random.choice(list(range(len(ds_val))), size=ps.num_bodies_to_display, replace=False, p=None)
         data_all = {}
@@ -373,11 +377,11 @@ class vposer_trainer:
                                                              epoch_num=self.epochs_completed, it=len(self.ds_val),
                                                              try_num=self.try_num, mode='evald')
                 if eval_loss_dict['loss_total'] < self.best_loss_total:
-                    self.best_model_fname = makepath(os.path.join(self.ps.work_dir, 'snapshots', 'TR%02d_E%03d.pt' % (
+                    self.ps.best_model_fname = makepath(os.path.join(self.ps.work_dir, 'snapshots', 'TR%02d_E%03d.pt' % (
                     self.try_num, self.epochs_completed)), isfile=True)
                     self.logger(eval_msg + ' ** ')
                     self.best_loss_total = eval_loss_dict['loss_total']
-                    torch.save(self.vposer_model.state_dict(), self.best_model_fname)
+                    torch.save(self.vposer_model.module.state_dict() if isinstance(self.vposer_model, torch.nn.DataParallel) else self.vposer_model.state_dict(), self.ps.best_model_fname)
 
                     imgname = '[%s]_TR%02d_E%03d.png' % (self.ps.expr_code, self.try_num, self.epochs_completed)
                     imgpath = os.path.join(self.ps.work_dir, 'images', imgname)
@@ -402,7 +406,7 @@ class vposer_trainer:
         self.logger('Finished Training at %s\n' % (datetime.strftime(endtime, '%Y-%m-%d_%H:%M:%S')))
         self.logger(
             'Training done in %s! Best val total loss achieved: %.2e\n' % (endtime - starttime, self.best_loss_total))
-        self.logger('Best model path: %s\n' % self.best_model_fname)
+        self.logger('Best model path: %s\n' % self.ps.best_model_fname)
 
     @staticmethod
     def creat_loss_message(loss_dict, expr_code='XX', epoch_num=0, it=0, try_num=0, mode='evald'):
