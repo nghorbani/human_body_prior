@@ -181,7 +181,7 @@ class BodyModel(nn.Module):
     def r(self):
         return c2c(self.forward().v)
 
-    def forward(self, root_orient=None, pose_body = None, pose_hand=None, pose_jaw=None, pose_eye=None, betas = None, **kwargs):
+    def forward(self, root_orient=None, pose_body = None, pose_hand=None, pose_jaw=None, pose_eye=None, betas = None, trans = None, **kwargs):
         '''
 
         :param root_orient: Nx3
@@ -205,6 +205,7 @@ class BodyModel(nn.Module):
         elif self.model_type in ['mano_left', 'mano_right']:
             if pose_hand is None:  pose_hand = self.pose_hand
 
+        if trans is None: trans = self.trans
         if betas is None: betas = self.betas
 
         if self.model_type in ['smplh', 'smpl']:
@@ -228,8 +229,8 @@ class BodyModel(nn.Module):
                                    num_joints=int(full_pose.shape[1]/3),
                                    dtype=self.dtype)
 
-        Jtr = joints + self.trans.unsqueeze(dim=1)
-        verts = verts + self.trans.unsqueeze(dim=1)
+        Jtr = joints + trans.unsqueeze(dim=1)
+        verts = verts + trans.unsqueeze(dim=1)
 
         class result_meta(object):
             pass
