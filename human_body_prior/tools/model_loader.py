@@ -33,13 +33,13 @@ def expid2model(expr_dir, model_type):
     trained_model_fname = sorted(glob.glob(os.path.join(expr_dir, 'snapshots', '*.pt')), key=os.path.getmtime)[-1]
     try_num = os.path.basename(trained_model_fname).split('_')[0]
 
-    print(('Found Trained Model: %s' % trained_model_fname))
+    # print(('Found Trained Model: %s' % trained_model_fname))
 
     default_ps_fname = glob.glob(os.path.join(expr_dir,'*.ini'))[0]
     # default_ps_fname = os.path.join(expr_dir, '%s_vposer_%s_defaults.ini' % (try_num, model_type.replace('_left', '').replace('_right', '')))
     if not os.path.exists(
         default_ps_fname): raise ValueError('Could not find the appropriate vposer_settings: %s' % default_ps_fname)
-    ps = Configer(default_ps_fname=default_ps_fname, work_dir = expr_dir)
+    ps = Configer(default_ps_fname=default_ps_fname, work_dir = expr_dir, best_model_fname=trained_model_fname)
 
     return ps, trained_model_fname
 
@@ -58,7 +58,7 @@ def load_vposer(expr_dir, model_type='smpl', use_snapshot_model = False):
     ps, trained_model_fname = expid2model(expr_dir, model_type=model_type)
     if use_snapshot_model:
 
-        vposer_path = os.path.join(expr_dir, 'vposer_%s_pt.py'%model_type.replace('_left','').replace('_right',''))
+        vposer_path = os.path.join(expr_dir, 'vposer_%s.py'%model_type.replace('_left','').replace('_right',''))
 
         spec = importlib.util.spec_from_file_location('VPoser', vposer_path)
         module = importlib.util.module_from_spec(spec)
