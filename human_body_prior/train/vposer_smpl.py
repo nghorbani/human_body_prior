@@ -43,8 +43,12 @@ from configer import Configer
 
 from human_body_prior.tools.omni_tools import copy2cpu as c2c
 import torchgeometry as tgm
-from human_body_prior.tools.omni_tools import makepath
+from human_body_prior.tools.omni_tools import makepath, id_generator, log2file
 from human_body_prior.body_model.body_model import BodyModel
+from human_body_prior.data.dataloader import VPoserDS
+
+from torch.utils.data import DataLoader
+
 
 class ContinousRotReprDecoder(nn.Module):
     def __init__(self):
@@ -102,8 +106,7 @@ class VPoser(nn.Module):
         Xout = self.bodyprior_enc_bn2(Xout)
         Xout = self.dropout(Xout)
         Xout = F.leaky_relu(self.bodyprior_enc_fc2(Xout), negative_slope=.2)
-        return torch.distributions.normal.Normal(self.bodyprior_enc_mu(Xout),
-                                                 F.softplus(self.bodyprior_enc_logvar(Xout)))
+        return torch.distributions.normal.Normal(self.bodyprior_enc_mu(Xout), F.softplus(self.bodyprior_enc_logvar(Xout)))
 
     def decode(self, Zin, output_type='matrot'):
         assert output_type in ['matrot', 'aa']
@@ -135,7 +138,9 @@ class VPoser(nn.Module):
         q_z_sample = q_z.rsample()
         Prec = self.decode(q_z_sample)
         if output_type == 'aa': Prec = VPoser.matrot2aa(Prec)
-        return Prec, q_z
+
+        #return Prec, q_z.mean, q_z.sigma
+        return {'pose':Prec, 'mean':q_z.mean, 'std':q_z.scale}
 
     def sample_poses(self, num_poses, output_type='aa', seed=None):
         np.random.seed(seed)
@@ -168,11 +173,9 @@ class VPoser(nn.Module):
         return pose_body_matrot
 
 
-class vposer_trainer:
+class VPoserTrainer:
 
     def __init__(self, work_dir, ps):
-        from human_body_prior.data.dataloader import VPoserDS
-        from torch.utils.data import DataLoader
         from tensorboardX import SummaryWriter
 
         from human_body_prior.tools.omni_tools import log2file, makepath
@@ -182,17 +185,16 @@ class vposer_trainer:
         torch.manual_seed(ps.seed)
 
         starttime = datetime.now().replace(microsecond=0)
-        log_name = datetime.strftime(starttime, '%Y%m%d_%H%M')
         ps.work_dir = makepath(work_dir, isfile=False)
 
-        logger = log2file(os.path.join(work_dir, '[%s]_%s.log' % (expr_code, log_name)))
+        logger = log2file(os.path.join(work_dir, '%s.log' % ps.expr_code))
 
         summary_logdir = os.path.join(work_dir, 'summaries')
         self.swriter = SummaryWriter(log_dir=summary_logdir)
         logger('tensorboard --logdir=%s' % summary_logdir)
         logger('Torch Version: %s\n' % torch.__version__)
 
-        shutil.copy2(os.path.basename(sys.argv[0]), work_dir)
+        shutil.copy2(sys.argv[0], work_dir)
 
         use_cuda = torch.cuda.is_available()
         if use_cuda: torch.cuda.empty_cache()
@@ -216,12 +218,18 @@ class vposer_trainer:
         self.ds_train = DataLoader(ds_train, batch_size=ps.batch_size, shuffle=True, drop_last=True, **kwargs)
         ds_val = VPoserDS(dataset_dir=os.path.join(ps.dataset_dir, 'vald'))
         self.ds_val = DataLoader(ds_val, batch_size=ps.batch_size, shuffle=True, drop_last=True, **kwargs)
+        ds_test = VPoserDS(dataset_dir=os.path.join(ps.dataset_dir, 'test'))
+        self.ds_test = DataLoader(ds_test, batch_size=ps.batch_size, shuffle=True, drop_last=True, **kwargs)
         logger('Train dataset size %.2f M' % (len(self.ds_train.dataset)*1e-6))
         logger('Validation dataset size %d' % len(self.ds_val.dataset))
+        logger('Test dataset size %d' % len(self.ds_test.dataset))
 
         ps.data_shape = list(ds_val[0]['pose'].shape)
         self.vposer_model = VPoser(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape=ps.data_shape,
-                                   use_cont_repr=ps.use_cont_repr).to(self.comp_device)
+                                   use_cont_repr=ps.use_cont_repr)#.to(self.comp_device)
+
+        self.vposer_model = nn.DataParallel(self.vposer_model)
+        self.vposer_model.to(self.comp_device)
 
         # enc_varlist = [var[1] for var in self.vposer_model.named_parameters() if 'bodyprior_enc' in var[0]]
         # dec_varlist = [var[1] for var in self.vposer_model.named_parameters() if 'bodyprior_dec' in var[0]]
@@ -244,9 +252,8 @@ class vposer_trainer:
         self.ps = ps
 
         if ps.best_model_fname is not None:
-            self.supercap_model.load_state_dict(torch.load(ps.best_model_fname, map_location=self.comp_device))
+            self.vposer_model.module.load_state_dict(torch.load(ps.best_model_fname, map_location=self.comp_device))
             logger('Restored model from %s'%ps.best_model_fname)
-
 
         chose_ids = np.random.choice(list(range(len(ds_val))), size=ps.num_bodies_to_display, replace=False, p=None)
         data_all = {}
@@ -257,12 +264,12 @@ class vposer_trainer:
                 else:
                     data_all[k] = v[np.newaxis]
 
-        self.vis_porig = {k: data_all[k].to(self.comp_device) for k in data_all.keys()}
+        self.vis_dorig = {k: data_all[k].to(self.comp_device) for k in data_all.keys()}
 
         self.bm_path = '/ps/project/common/moshpp/smplh/locked_head/neutral/model.npz'
-        self.bm = BodyModel(self.bm_path, 'smplh', batch_size=self.ps.batch_size, use_posedirs=False).to(self.comp_device)
+        self.bm = BodyModel(self.bm_path, 'smplh', batch_size=self.ps.batch_size, use_posedirs=True).to(self.comp_device)
 
-        # self.swriter.add_graph(self.vposer_model, self.vis_porig, True)
+        # self.swriter.add_graph(self.vposer_model, self.vis_dorig, True)
 
     def train(self):
         self.vposer_model.train()
@@ -270,51 +277,54 @@ class vposer_trainer:
         train_loss_dict = {}
         for it, data in enumerate(self.ds_train):
 
-            porig = data['pose'].to(self.comp_device)
+            dorig = data['pose'].to(self.comp_device)
             self.optimizer.zero_grad()
-            prec, q_z = self.vposer_model(porig, input_type='aa', output_type='aa')
-            loss_total, cur_loss_dict = self.compute_loss(porig, prec, q_z)
+            drec = self.vposer_model(dorig, input_type='aa', output_type='aa')
+            loss_total, cur_loss_dict = self.compute_loss(dorig, drec)
             loss_total.backward()
             self.optimizer.step()
 
             train_loss_dict = {k: train_loss_dict.get(k, 0.0) + v.item() for k, v in cur_loss_dict.items()}
             if it % (save_every_it + 1) == 0:
                 cur_train_loss_dict = {k: v / (it + 1) for k, v in train_loss_dict.items()}
-                train_msg = vposer_trainer.creat_loss_message(cur_train_loss_dict, expr_code=self.ps.expr_code,
-                                                              epoch_num=self.epochs_completed, it=it,
-                                                              try_num=self.try_num, mode='train')
+                train_msg = VPoserTrainer.creat_loss_message(cur_train_loss_dict, expr_code=self.ps.expr_code,
+                                                             epoch_num=self.epochs_completed, it=it,
+                                                             try_num=self.try_num, mode='train')
 
                 self.logger(train_msg)
-                self.swriter.add_histogram('q_z_sample', c2c(q_z.rsample()), it)
+                self.swriter.add_histogram('q_z_sample', c2c(drec['mean']), it)
 
         train_loss_dict = {k: v / len(self.ds_train) for k, v in train_loss_dict.items()}
         return train_loss_dict
 
-    def evaluate(self):
+    def evaluate(self, split_name= 'vald'):
         self.vposer_model.eval()
         eval_loss_dict = {}
+        data = self.ds_val if split_name == 'vald' else self.ds_test
         with torch.no_grad():
-            for data in self.ds_val:
-                porig = data['pose'].to(self.comp_device)
-                prec, q_z = self.vposer_model(porig, input_type='aa', output_type='aa')
-                _, cur_loss_dict = self.compute_loss(porig, prec, q_z)
+            for data in data:
+                dorig = data['pose'].to(self.comp_device)
+                drec = self.vposer_model(dorig, input_type='aa', output_type='aa')
+                _, cur_loss_dict = self.compute_loss(dorig, drec)
                 eval_loss_dict = {k: eval_loss_dict.get(k, 0.0) + v.item() for k, v in cur_loss_dict.items()}
 
-        eval_loss_dict = {k: v / len(self.ds_val) for k, v in eval_loss_dict.items()}
+        eval_loss_dict = {k: v / len(data) for k, v in eval_loss_dict.items()}
         return eval_loss_dict
 
-    def compute_loss(self, porig, prec, q_z):
-        batch_size = porig.size(0)
-        device = porig.device
-        dtype = porig.dtype
+    def compute_loss(self, dorig, drec):
+        prec = drec['pose']
+        q_z = torch.distributions.normal.Normal(drec['mean'], drec['std'])
+
+        batch_size = dorig.size(0)
+        device = dorig.device
+        dtype = dorig.dtype
         latentD = q_z.mean.size(1)
         MESH_SCALER = 1000
 
-        #loss_rec = (1. - self.ps.kl_coef) * torch.mean(torch.sum(torch.pow(porig - prec, 2), dim=[1, 2, 3]))
-        mesh_orig = self.bm(pose_body=porig.view(self.ps.batch_size,-1)).v*MESH_SCALER
+        #loss_rec = (1. - self.ps.kl_coef) * torch.mean(torch.sum(torch.pow(dorig - prec, 2), dim=[1, 2, 3]))
+        mesh_orig = self.bm(pose_body=dorig.view(self.ps.batch_size,-1)).v*MESH_SCALER
         mesh_rec = self.bm(pose_body=prec.view(self.ps.batch_size,-1)).v*MESH_SCALER
-        loss_rec =  (1. - self.ps.kl_coef) * torch.mean(torch.abs(mesh_orig - mesh_rec))
-        # loss_rec =  (1. - self.ps.kl_coef) * torch.mean(torch.sum(torch.pow(mesh_orig - mesh_rec, 2), dim=[1,2]))
+        loss_mesh_rec =  (1. - self.ps.kl_coef) * torch.mean(torch.abs(mesh_orig - mesh_rec))
 
         p_z = torch.distributions.normal.Normal(
             loc=torch.tensor(np.zeros([batch_size, latentD]), requires_grad=False).to(device).type(dtype),
@@ -332,15 +342,18 @@ class vposer_trainer:
         # loss_det1 = self.ps.det1_coef * torch.mean(torch.sum(torch.abs(det_R - one), dim=[1]))
 
         loss_dict = {'loss_kl': loss_kl,
-                     'loss_rec': loss_rec,
+                     'loss_mesh_rec': loss_mesh_rec,
                      # 'loss_ortho':loss_ortho,
                      # 'loss_det1':loss_det1,
                      }
+
+        if self.vposer_model.training and self.epochs_completed < 10:
+            loss_dict['loss_pose_rec'] = (1. - self.ps.kl_coef) * torch.mean(torch.sum(torch.pow(dorig - prec, 2), dim=[1, 2, 3]))
+
         if self.ps.ip_avoid:
             pose = VPoser.matrot2aa(prec).view(batch_size, -1)
             bm_forwarded = self.body_interpenetration.bm(pose_body=pose)
-            loss_dict['loss_ip_rec'] = self.ps.ip_coef * torch.mean(
-                self.body_interpenetration(bm_forwarded=bm_forwarded))
+            loss_dict['loss_ip_rec'] = self.ps.ip_coef * torch.mean(self.body_interpenetration(bm_forwarded=bm_forwarded))
 
             # pgen = self.vposer_model.decode(q_z.mean, aa_out=True).view(batch_size, -1)
             # bm_forwarded = self.body_interpenetration.bm(pose_body = pgen)
@@ -357,7 +370,6 @@ class vposer_trainer:
 
         self.logger(
             'Started Training at %s for %d epochs' % (datetime.strftime(starttime, '%Y-%m-%d_%H:%M:%S'), num_epochs))
-        if message is not None: self.logger(expr_message)
 
         vis_bm =  BodyModel(self.bm_path, 'smplh', num_betas=16).to(self.comp_device)
         prev_lr = np.inf
@@ -373,9 +385,9 @@ class vposer_trainer:
             eval_loss_dict = self.evaluate()
 
             with torch.no_grad():
-                eval_msg = vposer_trainer.creat_loss_message(eval_loss_dict, expr_code=self.ps.expr_code,
-                                                             epoch_num=self.epochs_completed, it=len(self.ds_val),
-                                                             try_num=self.try_num, mode='evald')
+                eval_msg = VPoserTrainer.creat_loss_message(eval_loss_dict, expr_code=self.ps.expr_code,
+                                                            epoch_num=self.epochs_completed, it=len(self.ds_val),
+                                                            try_num=self.try_num, mode='evald')
                 if eval_loss_dict['loss_total'] < self.best_loss_total:
                     self.ps.best_model_fname = makepath(os.path.join(self.ps.work_dir, 'snapshots', 'TR%02d_E%03d.pt' % (
                     self.try_num, self.epochs_completed)), isfile=True)
@@ -385,12 +397,12 @@ class vposer_trainer:
 
                     imgname = '[%s]_TR%02d_E%03d.png' % (self.ps.expr_code, self.try_num, self.epochs_completed)
                     imgpath = os.path.join(self.ps.work_dir, 'images', imgname)
-                    vposer_trainer.vis_results(self.vis_porig, self.vposer_model, bm=vis_bm, imgpath=imgpath)
+                    # VPoserTrainer.vis_results(self.vis_dorig, self.vposer_model, bm=vis_bm, imgpath=imgpath)
 
                 else:
                     self.logger(eval_msg)
 
-                # prec, _ = self.vposer_model(self.vis_porig)
+                # prec, _ = self.vposer_model(self.vis_dorig)
                 # R = prec.view([-1, 23, 3, 3])
                 # det_R = torch.transpose(torch.stack([determinant_3d(R[:, jIdx, ...]) for jIdx in range(23)]), 0, 1)
                 # self.swriter.add_histogram('det_R', c2c(det_R), epoch_num)
@@ -402,7 +414,7 @@ class vposer_trainer:
                                          self.epochs_completed)
 
         endtime = datetime.now().replace(microsecond=0)
-        self.logger(expr_message)
+
         self.logger('Finished Training at %s\n' % (datetime.strftime(endtime, '%Y-%m-%d_%H:%M:%S')))
         self.logger(
             'Training done in %s! Best val total loss achieved: %.2e\n' % (endtime - starttime, self.best_loss_total))
@@ -413,25 +425,6 @@ class vposer_trainer:
         ext_msg = ' | '.join(['%s = %.2e' % (k, v) for k, v in loss_dict.items() if k != 'loss_total'])
         return '[%s]_TR%02d_E%03d - It %05d - %s: [T:%.2e] - [%s]' % (
         expr_code, try_num, epoch_num, it, mode, loss_dict['loss_total'], ext_msg)
-
-    @staticmethod
-    def vis_results(dorig, vposer_model, bm, imgpath):
-        from human_body_prior.tools.visualization_tools import render_smpl_params, imagearray2file
-        from human_body_prior.train.vposer_smpl import VPoser
-
-        num_bodies_to_display = dorig['pose'].size(0)
-        with torch.no_grad():
-
-            prec_aa, q_z = vposer_model(dorig['pose'], input_type='aa', output_type='aa')
-            pgen_aa = vposer_model.sample_poses(num_poses=num_bodies_to_display, output_type='aa')
-
-            img_orig = render_smpl_params(bm, pose_body=dorig['pose'])
-            img_rec = render_smpl_params(bm,  pose_body=prec_aa)
-            img_gen = render_smpl_params(bm,  pose_body=pgen_aa)
-
-            img_array = np.array([img_orig, img_rec, img_gen])
-            img_array = img_array.reshape([3,num_bodies_to_display,1,400,400,3])
-            imagearray2file(img_array, imgpath)
 
     @staticmethod
     def vis_results(dorig, vposer_model, bm, imgpath):
@@ -452,19 +445,23 @@ class vposer_trainer:
         mv = MeshViewer(width=imw, height=imh, use_offscreen=True)
         mv.render_wireframe = True
 
-        porig_aa = dorig['pose'].view([-1,1, num_joints, 3])
+        dorig_aa = dorig['pose'].view([-1,1, num_joints, 3])
 
-        prec_aa, q_z = vposer_model(porig_aa, input_type='aa', output_type='aa')
+        prec_aa = vposer_model(dorig_aa, input_type='aa', output_type='aa')['pose']
         prec_aa = prec_aa.view(batch_size,-1)
-        pgen_aa = vposer_model.sample_poses(num_poses=batch_size, output_type='aa')
+        if hasattr(vposer_model, 'module'):
+            pgen_aa = vposer_model.module.sample_poses(num_poses=batch_size, output_type='aa')
+        else:
+            pgen_aa = vposer_model.sample_poses(num_poses=batch_size, output_type='aa')
+
         pgen_aa = pgen_aa.view(batch_size,-1)
-        porig_aa = porig_aa.view(batch_size, -1)
+        dorig_aa = dorig_aa.view(batch_size, -1)
 
         images = np.zeros([len(view_angles), batch_size, 1, imw, imh, 3])
         images_gen = np.zeros([len(view_angles), batch_size, 1, imw, imh, 3])
         for cId in range(0, batch_size):
 
-            bm.pose_body.data[:] = bm.pose_body.new(porig_aa[cId])
+            bm.pose_body.data[:] = bm.pose_body.new(dorig_aa[cId])
             orig_body_mesh = trimesh.Trimesh(vertices=c2c(bm().v[0]), faces=c2c(bm.f), vertex_colors=np.tile(colors['grey'], (6890, 1)))
 
             bm.pose_body.data[:] = bm.pose_body.new(prec_aa[cId])
@@ -489,48 +486,11 @@ class vposer_trainer:
         imagearray2file(images_gen, imgpath.replace('.png','_gen.png'))
 
 
-if __name__ == '__main__':
+def run_trainer(default_ps_fname):
+    ps = Configer(default_ps_fname=default_ps_fname)
+    vp_trainer = VPoserTrainer(ps.work_dir, ps)
 
-    expr_code = '0040_00_cmu_V02'
-    model_type = 'smpl'
-
-    default_ps_fname = 'vposer_smpl_defaults.ini'
-
-    base_dir = '/ps/project/humanbodyprior'
-
-    work_dir = os.path.join(base_dir, 'VPoser', model_type, 'pytorch', expr_code)
-
-    params = {
-        'model_type': model_type,
-        'batch_size': 512,
-        'latentD': 32,
-        'num_neurons': 512,
-        'n_workers': 20,
-        'cuda_id':1,
-        'base_lr': 5e-3,
-
-        'reg_coef': 5e-4,
-        'kl_coef': 5e-3,
-        'use_cont_repr': True,
-
-        'ip_avoid': False,
-        'ip_bmodel': '/ps/project/common/moshpp/smpl/locked_head/neutral/model.pkl',
-        'ip_max_collisions': 4,
-        'ip_coef': 1e-2,
-
-        'adam_beta1': 0.9,
-        'best_model_fname': None,
-        'log_every_epoch': 2,
-        'expr_code': expr_code,
-        'work_dir': work_dir,
-        'num_epochs': 100,
-        'dataset_dir': '/ps/project/humanbodyprior/VPoser/data/004_00_cmu/smpl/pytorch/final_dsdir',
-    }
-
-    vp_trainer = vposer_trainer(work_dir, ps=Configer(default_ps_fname=default_ps_fname, **params))
-    ps = vp_trainer.ps
-
-    ps.dump_settings(os.path.join(work_dir, 'TR%02d_%s' % (ps.try_num, os.path.basename(default_ps_fname))))
+    ps.dump_settings(os.path.join(ps.work_dir, 'TR%02d_%s' % (ps.try_num, os.path.basename(default_ps_fname))))
 
     expr_message = '\n[%s] %d H neurons, latentD=%d, batch_size=%d, beta=%.1e,  kl_coef = %.1e\n' \
                    % (ps.expr_code, ps.num_neurons, ps.latentD, ps.batch_size, ps.adam_beta1, ps.kl_coef)
@@ -538,8 +498,26 @@ if __name__ == '__main__':
     expr_message += 'Using SMPL to produce meshes of the bodies\n'
     expr_message += 'Reconstruction loss is L1 on meshes\n'
     expr_message += 'Using Batch Normalization\n'
+    expr_message += 'Running on the cluster, hence the large batch size. accommodate the base_lr\n'
     expr_message += '\n'
 
     vp_trainer.logger(expr_message)
     vp_trainer.perform_training()
-    ps.dump_settings(os.path.join(work_dir, 'TR%02d_%s' % (ps.try_num, os.path.basename(default_ps_fname))))
+    ps.dump_settings(os.path.join(ps.work_dir, 'TR%02d_%s' % (ps.try_num, os.path.basename(default_ps_fname))))
+
+    vp_trainer.logger(expr_message)
+
+    test_loss_dict = vp_trainer.evaluate(split_name='test')
+    vp_trainer.logger('Final loss on test set is %s' % (' | '.join(['%s = %.2e' % (k, v) for k, v in test_loss_dict.items()])))
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Train a vposer given settings',formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument('--config_path', dest="config_path", type=str, help='path to ini file for Configer.')
+
+    args = parser.parse_args()
+
+    run_trainer(args.config_path)
