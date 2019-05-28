@@ -87,14 +87,15 @@ def lbs(betas, pose, v_template, shapedirs, posedirs, J_regressor, parents,
 
     # import numpy as np
 
-    # 3. Add pose blend shapes
-    # N x J x 3 x 3
-    ident = torch.eye(3, dtype=dtype, device=device)
     rot_mats = batch_rodrigues(pose.view(-1, 3)).view([batch_size, -1, 3, 3])
-    pose_feature = (rot_mats[:, 1:, :, :] - ident).view([batch_size, -1])
 
-    # (N x P) x (P, V * 3) -> N x V x 3
     if posedirs is not None:
+        # 3. Add pose blend shapes
+        # N x J x 3 x 3
+        ident = torch.eye(3, dtype=dtype, device=device)
+        pose_feature = (rot_mats[:, 1:, :, :] - ident).view([batch_size, -1])
+
+        # (N x P) x (P, V * 3) -> N x V x 3
         pose_offsets = torch.matmul(pose_feature, posedirs).view(batch_size, -1, 3)
         v_posed = pose_offsets + v_shaped
     else:
