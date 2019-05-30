@@ -39,9 +39,9 @@ def expid2model(expr_dir, model_type):
     # default_ps_fname = os.path.join(expr_dir, '%s_vposer_%s_defaults.ini' % (try_num, model_type.replace('_left', '').replace('_right', '')))
     if not os.path.exists(
         default_ps_fname): raise ValueError('Could not find the appropriate vposer_settings: %s' % default_ps_fname)
-    ps = Configer(default_ps_fname=default_ps_fname, work_dir = expr_dir, best_model_fname=trained_model_fname)
+    ps = Configer(default_ps_fname=default_ps_fname, work_dir = expr_dir, best_model_fname=best_model_fname)
 
-    return ps, trained_model_fname
+    return ps, best_model_fname
 
 def load_vposer(expr_dir, model_type='smpl', use_snapshot_model = False):
     '''
