@@ -34,16 +34,17 @@ from human_body_prior.body_model.body_model import BodyModel
 from torch.utils.data import DataLoader
 import torch
 
-def save_testset_samples(vposer_model, ps, batch_size=5, save_upto_bnum=10):
+def save_testset_samples(dataset_dir, vposer_model, ps, batch_size=5, save_upto_bnum=10):
+    comp_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     vposer_model.eval()
+    vposer_model = vposer_model.to(comp_device)
 
-    comp_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     bm_path = '/ps/project/common/moshpp/smplh/locked_head/neutral/model.npz'
     bm = BodyModel(bm_path, 'smplh', batch_size=batch_size, use_posedirs=True).to(comp_device)
 
-    ds_test = VPoserDS(dataset_dir=os.path.join(ps.dataset_dir, 'test'))
+    ds_test = VPoserDS(dataset_dir=os.path.join(dataset_dir, 'test'))
     ds_test = DataLoader(ds_test, batch_size=batch_size, shuffle=True, drop_last=False)
 
     test_savepath = os.path.join(ps.work_dir, 'evaluations', os.path.basename(ps.best_model_fname).replace('.pt',''))
@@ -56,8 +57,9 @@ def save_testset_samples(vposer_model, ps, batch_size=5, save_upto_bnum=10):
         if bId> save_upto_bnum: break
 
 
-def evaluate_test_error(vposer_model, ps, batch_size=512):
+def evaluate_test_error(dataset_dir, vposer_model, ps, batch_size=512):
     vposer_model.eval()
+
     comp_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     bm_path = '/ps/project/common/moshpp/smplh/locked_head/neutral/model.npz'
@@ -65,7 +67,7 @@ def evaluate_test_error(vposer_model, ps, batch_size=512):
 
     vposer_model = vposer_model.to(comp_device)
 
-    ds_test = VPoserDS(dataset_dir=os.path.join(ps.dataset_dir, 'test'))
+    ds_test = VPoserDS(dataset_dir=os.path.join(dataset_dir, 'test'))
     ds_test = DataLoader(ds_test, batch_size=batch_size, shuffle=True, drop_last=True)
 
     loss = []
@@ -98,6 +100,6 @@ if __name__ == '__main__':
 
             vposer_model, vposer_ps = load_vposer(expr_dir, model_type='smpl', use_snapshot_model = True)
 
-            save_testset_samples(vposer_model, vposer_ps, batch_size=5, save_upto_bnum=10)
-            v2v_mae = evaluate_test_error(vposer_model, vposer_ps, batch_size=512)
+            save_testset_samples(dataset_dir, vposer_model, vposer_ps, batch_size=5, save_upto_bnum=10)
+            v2v_mae = evaluate_test_error(dataset_dir, vposer_model, vposer_ps, batch_size=512)
             print('[%s] v2v_mae = %.2e' % (vposer_ps.best_model_fname, v2v_mae))
