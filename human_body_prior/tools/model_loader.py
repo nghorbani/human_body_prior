@@ -20,34 +20,33 @@
 # Code Developed by: Nima Ghorbani <https://www.linkedin.com/in/nghorbani/>
 # 2018.01.02
 
-import os
+import os, glob
 import numpy as np
 
 
-def expid2model(expr_dir, model_type):
+def expid2model(expr_dir):
     from configer import Configer
-    import os, glob
 
     if not os.path.exists(expr_dir): raise ValueError('Could not find the experiment directory: %s' % expr_dir)
 
-    trained_model_fname = sorted(glob.glob(os.path.join(expr_dir, 'snapshots', '*.pt')), key=os.path.getmtime)[-1]
-    try_num = os.path.basename(trained_model_fname).split('_')[0]
+    best_model_fname = sorted(glob.glob(os.path.join(expr_dir, 'snapshots', '*.pt')), key=os.path.getmtime)[-1]
+    try_num = os.path.basename(best_model_fname).split('_')[0]
 
     # print(('Found Trained Model: %s' % trained_model_fname))
 
     default_ps_fname = glob.glob(os.path.join(expr_dir,'*.ini'))[0]
-    # default_ps_fname = os.path.join(expr_dir, '%s_vposer_%s_defaults.ini' % (try_num, model_type.replace('_left', '').replace('_right', '')))
     if not os.path.exists(
         default_ps_fname): raise ValueError('Could not find the appropriate vposer_settings: %s' % default_ps_fname)
     ps = Configer(default_ps_fname=default_ps_fname, work_dir = expr_dir, best_model_fname=best_model_fname)
 
     return ps, best_model_fname
 
-def load_vposer(expr_dir, model_type='smpl', use_snapshot_model = False):
+def load_vposer(expr_dir, vp_model='snapshot'):
     '''
 
     :param expr_dir:
-    :param model_type: mano/smpl
+    :param vp_model: either 'snapshot' to use the experiment folder's code or a VPoser imported module, e.g.
+    from human_body_prior.train.vposer_smpl import VPoser, then pass VPoser to this function
     :param if True will load the model definition used for training, and not the one in current repository
     :return:
     '''
@@ -55,10 +54,10 @@ def load_vposer(expr_dir, model_type='smpl', use_snapshot_model = False):
     import os
     import torch
 
-    ps, trained_model_fname = expid2model(expr_dir, model_type=model_type)
-    if use_snapshot_model:
+    ps, trained_model_fname = expid2model(expr_dir)
+    if vp_model == 'snapshot':
 
-        vposer_path = os.path.join(expr_dir, 'vposer_%s.py'%model_type.replace('_left','').replace('_right',''))
+        vposer_path = sorted(glob.glob(os.path.join(expr_dir, 'vposer_*.py')), key=os.path.getmtime)[-1]
 
         spec = importlib.util.spec_from_file_location('VPoser', vposer_path)
         module = importlib.util.module_from_spec(spec)
@@ -66,11 +65,7 @@ def load_vposer(expr_dir, model_type='smpl', use_snapshot_model = False):
 
         vposer_pt = getattr(module, 'VPoser')(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape=ps.data_shape)
     else:
-        if model_type == 'smpl':
-            from human_body_prior.train.vposer_smpl import VPoser
-        else:
-            raise NotImplementedError
-        vposer_pt = VPoser(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape=ps.data_shape)
+        vposer_pt = vp_model(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape=ps.data_shape)
 
     vposer_pt.load_state_dict(torch.load(trained_model_fname, map_location='cpu'))
     vposer_pt.eval()
@@ -78,11 +73,11 @@ def load_vposer(expr_dir, model_type='smpl', use_snapshot_model = False):
     return vposer_pt, ps
 
 
-def extract_weights_asnumpy(exp_id, model_type='smpl', use_snapshot_model= False):
+def extract_weights_asnumpy(exp_id, vp_model= False):
     from human_body_prior.tools.omni_tools import makepath
     from human_body_prior.tools.omni_tools import copy2cpu as c2c
 
-    vposer_pt, vposer_ps = load_vposer(exp_id, model_type=model_type, use_snapshot_model=use_snapshot_model)
+    vposer_pt, vposer_ps = load_vposer(exp_id, vp_model=vp_model)
 
     save_wt_dir = makepath(os.path.join(vposer_ps.work_dir, 'weights_npy'))
 
@@ -97,7 +92,7 @@ def extract_weights_asnumpy(exp_id, model_type='smpl', use_snapshot_model= False
 if __name__ == '__main__':
     from human_body_prior.tools.omni_tools import copy2cpu as c2c
     expr_dir = '/ps/project/humanbodyprior/VPoser/smpl/pytorch/0020_06_amass'
-    vposer_pt, ps = load_vposer(expr_dir, model_type='smpl', use_snapshot_model=False)
-    pose = c2c(vposer_pt.sample_poses(10, seed=100)[0,0])
+    from human_body_prior.train.vposer_smpl import VPoser
+    vposer_pt, ps = load_vposer(expr_dir, vp_model='snapshot')
+    pose = c2c(vposer_pt.sample_poses(10))
     print(pose.shape)
-    print(pose[:])

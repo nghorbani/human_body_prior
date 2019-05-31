@@ -98,7 +98,7 @@ if __name__ == '__main__':
                 print('%s does not exist'%expr_dir)
                 continue
 
-            vposer_model, vposer_ps = load_vposer(expr_dir, model_type='smpl', use_snapshot_model = True)
+            vposer_model, vposer_ps = load_vposer(expr_dir, vp_model='snapshot')
 
             save_testset_samples(dataset_dir, vposer_model, vposer_ps, batch_size=5, save_upto_bnum=10)
             v2v_mae = evaluate_test_error(dataset_dir, vposer_model, vposer_ps, batch_size=512)
