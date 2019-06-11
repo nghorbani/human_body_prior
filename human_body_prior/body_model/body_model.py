@@ -14,7 +14,6 @@
 # If you use this code in a research publication please consider citing the following:
 #
 # Expressive Body Capture: 3D Hands, Face, and Body from a Single Image <https://arxiv.org/abs/1904.05866>
-# AMASS: Archive of Motion Capture as Surface Shapes <https://arxiv.org/abs/1904.03278>
 #
 #
 # Code Developed by:

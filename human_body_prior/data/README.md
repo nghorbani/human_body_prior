@@ -55,3 +55,6 @@ amass_splits['train'] = list(set(amass_splits['train']).difference(set(amass_spl
 
 prepare_vposer_datasets(amass_splits, amass_dir, vposer_datadir, logger=logger)
 ```
+
+## Note
+If you consider training your own VPoser for your research using AMASS dataset, then please follow its respective citation guideline. 
