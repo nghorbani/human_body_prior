@@ -32,7 +32,7 @@ def expid2model(expr_dir):
     best_model_fname = sorted(glob.glob(os.path.join(expr_dir, 'snapshots', '*.pt')), key=os.path.getmtime)[-1]
     try_num = os.path.basename(best_model_fname).split('_')[0]
 
-    # print(('Found Trained Model: %s' % trained_model_fname))
+    print(('Found Trained Model: %s' % best_model_fname))
 
     default_ps_fname = glob.glob(os.path.join(expr_dir,'*.ini'))[0]
     if not os.path.exists(

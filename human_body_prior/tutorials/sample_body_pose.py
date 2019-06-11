@@ -77,7 +77,7 @@ def dump_vposer_samples(bm, pose_body, out_imgpath, save_ply=True):
 
     return True
 
-def sample_vposer(expr_dir, num_samples=5, vp_model='snapshot'):
+def sample_vposer(expr_dir, bm, num_samples=5, vp_model='snapshot'):
     from human_body_prior.tools.omni_tools import id_generator, makepath
     from human_body_prior.tools.model_loader import load_vposer
     from human_body_prior.tools.omni_tools import copy2cpu
@@ -89,6 +89,6 @@ def sample_vposer(expr_dir, num_samples=5, vp_model='snapshot'):
     out_dir = makepath(os.path.join(ps.work_dir, 'evaluations', 'pose_generation'))
     out_imgpath = os.path.join(out_dir, '%s.png' % id_generator(6))
 
-    dump_vposer_samples(sampled_pose_body, out_imgpath)
+    dump_vposer_samples(bm, sampled_pose_body, out_imgpath)
     print('Dumped samples at %s'%out_dir)
     return sampled_pose_body
