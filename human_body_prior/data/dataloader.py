@@ -45,7 +45,9 @@ class VPoserDS(Dataset):
 
     def fetch_data(self, idx):
         data = {k: self.ds[k][idx] for k in self.ds.keys()}
-        data['pose'] = data['pose'].view(1,52,3)[:,1:22]
+        pose = data.pop('pose')
+        data['pose_aa'] = pose.view(1,52,3)[:,1:22]
+        data['pose_matrot'] = data['pose_matrot'].view(1,52,9)[:,1:22]
         return data
 
 if __name__ == '__main__':
