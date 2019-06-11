@@ -23,22 +23,27 @@
 # 2019.05.10
 
 __all__ = ['sample_vposer']
-
-import numpy as np
-from human_body_prior.tools.omni_tools import apply_mesh_tranfsormations_
 import os
+import numpy as np
+
 import trimesh
+
+from human_body_prior.tools.omni_tools import apply_mesh_tranfsormations_
 from human_body_prior.tools.omni_tools import copy2cpu as c2c
-from human_body_prior.tools.omni_tools import colors
+from human_body_prior.tools.omni_tools import colors, makepath
+from human_body_prior.body_model.body_model import BodyModel
+from human_body_prior.mesh.mesh_viewer import MeshViewer
+from human_body_prior.tools.visualization_tools import imagearray2file, smpl_params2ply
 
-def dump_vposer_samples(pose_body, out_imgpath, save_obj=True):
-    from human_body_prior.tools.visualization_tools import imagearray2file, smpl_params2ply
-    from human_body_prior.tools.omni_tools import makepath
-    from human_body_prior.body_model.body_model import BodyModel
-    from human_body_prior.mesh.mesh_viewer import MeshViewer
-
-    bm_path = '/ps/project/common/moshpp/smpl/locked_head/male/model.npz'
-    bm = BodyModel(bm_path, 'smpl')
+def dump_vposer_samples(bm, pose_body, out_imgpath, save_ply=True):
+    '''
+    
+    :param bm: the BodyModel instance
+    :param pose_body: Nx63 will pose the body
+    :param out_imgpath: the final png path
+    :param save_ply: if True will dump as ply files
+    :return: 
+    '''
 
     view_angles = [0, 90, -90]
     imw, imh = 400,400
@@ -63,7 +68,7 @@ def dump_vposer_samples(pose_body, out_imgpath, save_obj=True):
 
     np.savez(out_imgpath.replace('.png', '.npz'), pose=pose_body)
 
-    if save_obj:
+    if save_ply:
         im_id = os.path.basename(out_imgpath).split('.')[0]
         out_dir = makepath(os.path.join(os.path.dirname(out_imgpath), '%s_ply'%im_id))
         smpl_params2ply(bm, out_dir=out_dir, pose_body=pose_body)
@@ -87,9 +92,3 @@ def sample_vposer(expr_dir, num_samples=5, vp_model='snapshot'):
     dump_vposer_samples(sampled_pose_body, out_imgpath)
     print('Dumped samples at %s'%out_dir)
     return sampled_pose_body
-
-
-if __name__ == '__main__':
-
-    expr_dir = '/ps/project/humanbodyprior/VPoser/smpl/pytorch/0020_06_cmu_T2'
-    sample_vposer(expr_dir, 5, vp_model='snapshot')
