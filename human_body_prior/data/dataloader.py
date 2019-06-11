@@ -21,10 +21,14 @@
 # Nima Ghorbani <https://www.linkedin.com/in/nghorbani/>
 #
 # 2018.01.02
+import glob, os
 
 import torch
 from torch.utils.data import Dataset
-import glob, os
+
+import numpy as np
+
+from human_body_prior.train.vposer_smpl import VPoser
 
 class VPoserDS(Dataset):
     """AMASS: a pytorch loader for unified human motion capture dataset. http://amass.is.tue.mpg.de/"""
@@ -46,30 +50,8 @@ class VPoserDS(Dataset):
         data = {k: self.ds[k][idx] for k in self.ds.keys()}
         pose = data.pop('pose')
         data['pose_aa'] = pose.view(1,52,3)[:,1:22]
-        data['pose_matrot'] = data['pose_matrot'].view(1,52,9)[:,1:22]
+        if 'pose_matrot' not in data.keys():
+            data['pose_matrot'] = VPoser.aa2matrot(data['pose_aa'][np.newaxis]).view(1,-1,9)
+        else:
+            data['pose_matrot'] = data['pose_matrot'].view(1,52,9)[:,1:22]
         return data
-
-if __name__ == '__main__':
-
-    from torch.utils.data import DataLoader
-    from human_body_prior.body_model.body_model import BodyModel
-    from human_body_prior.tools.omni_tools import copy2cpu as c2c
-    import trimesh
-
-    batch_size = 10
-    ds_dir = '/ps/project/humanbodyprior/VPoser/data/20190313_cmu_T3/smpl/pytorch/final_data/vald'
-    ds = VPoserDS(dataset_dir=ds_dir)
-    print(len(ds))
-
-    dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True, num_workers=5)
-
-    model_pklpath = '/ps/project/common/moshpp/smpl/locked_head/female/model.npz'
-    bm = BodyModel(model_pklpath, model_type='smpl', batch_size=batch_size)
-
-    for i_batch, sample_batched in enumerate(dataloader):
-
-        vertices = c2c(bm.forward(pose_body=sample_batched['pose_aa'], betas=sample_batched['betas'][:,:10]).v)[1]
-        faces = c2c(bm.f)
-
-        mesh = trimesh.base.Trimesh(vertices, faces).show()
-
