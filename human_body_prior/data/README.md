@@ -1,27 +1,57 @@
-    # ['CMU', 'Transitions_mocap', 'MPI_Limits', 'SSM_synced', 'TotalCapture', 'Eyes_Japan_Dataset', 'MPI_mosh', 'MPI_HDM05', 'HumanEva', 'ACCAD', 'EKUT', 'SFU', 'KIT', 'H36M', 'TCD_handMocap', 'BML']
+# Preparing the training dataset
+The Human Body Prior, VPoser, presented here is trained on  [AMASS](https://amass.is.tue.mpg.de/) dataset. 
+AMASS is a large collection of human marker based optical mocap data as [SMPL](http://smpl.is.tue.mpg.de/) body model parameters.
+VPoser code here is implemented in [PyTorch](https://pytorch.org/), therefore, the data preparation code, 
+turns AMASS data into pytorch readable *.pt* files in three stages:
 
-    msg = ''' Using standard AMASS dataset preparation pipeline: 
-    1) Donwload all npz files from https://amass.is.tue.mpg.de/ 
-    2) Convert npz files to pytorch readable pt files. 
-    After this you can either augment this data by using another temporary dataloader to process in parallel 
-    or use this data directly to train your neural networks.
-    3)[optional] If you have augmented your data, dump augmented results into final pt files and use with your dataloader'''
+***Stage I*** turns the AMASS numpy *.npz* files into PyTorch *.pt* files. 
+For this, first you would need to download body parameters from the AMASS webpage: https://amass.is.tue.mpg.de/dataset.
+Then you have to select subsets of AMASS to be used for each data splits, e.g. train/validation/test. 
+Here we follow the recommended data splits of AMASS, that is:
 
-    expr_code = '005_00_WO_accad'
+```python
+amass_splits = {
+    'vald': ['HumanEva', 'MPI_HDM05', 'SFU', 'MPI_mosh'],
+    'test': ['Transitions_mocap', 'SSM_synced'],
+    'train': ['CMU', 'MPI_Limits', 'TotalCapture', 'Eyes_Japan_Dataset', 'KIT', 'BML', 'EKUT', 'TCD_handMocap', 'ACCAD']
+}
+amass_splits['train'] = list(set(amass_splits['train']).difference(set(amass_splits['test'] + amass_splits['vald'])))
+```
 
-    amass_dir = '/ps/project/amass/20190313/unified_results'
+During this stage, we also subsample the original data, so that we only take every some frames of the original mocap
+to be included in the final data files. 
+ 
+***Stage II*** turns the AMASS pytorch files into HDF5, *h5* files and along the process augments the data with extra fields or noise. 
+Using pytorch in the middle stage helps to parallelize augmentation tasks. 
+Furthermore, we use HDF5 files for the middle stage so that they can be used in other deep learning frameworks as well.
 
-    vposer_datadir = makepath('/ps/project/humanbodyprior/VPoser/data/%s/smpl/pytorch' % (expr_code))
+***Stage III*** again converts the augmented HDF5 files into final pytorch files that should be provided to the current VPoser training script.
 
-    logger = log2file(os.path.join(vposer_datadir, '%s.log' % (expr_code)))
-    logger('[%s] Preparing data for training VPoser.'%expr_code)
-    logger(msg)
-    
-    amass_splits = {
-        'vald': ['HumanEva', 'MPI_HDM05', 'SFU', 'MPI_mosh'],
-        'test': ['Transitions_mocap', 'SSM_synced'],
-        'train': ['CMU', 'MPI_Limits', 'TotalCapture', 'Eyes_Japan_Dataset', 'KIT', 'BML', 'EKUT', 'TCD_handMocap']#ACCAD
-    }
-    amass_splits['train'] = list(set(amass_splits['train']).difference(set(amass_splits['test'] + amass_splits['vald'])))
+During the process, the data preparation code can dump a log file to make it possible to track how data for different
+experiments has been produced.
 
-    prepare_vposer_datasets(amass_splits, amass_dir, vposer_datadir, logger=logger)
+Below is a full python script example to prepare a VPoser training data:
+
+```python
+import os
+from human_body_prior.tools.omni_tools import makepath, log2file
+from human_body_prior.data.prepare_data import prepare_vposer_datasets
+
+expr_code = 'SOME_UNIQUE_ID'
+
+amass_dir = 'THE_PATH_TO_AMASS_NPZ_FILES'
+
+vposer_datadir = makepath('OUTPUT_DATA_PATH/%s' % (expr_code))
+
+logger = log2file(os.path.join(vposer_datadir, '%s.log' % (expr_code)))
+logger('[%s] Preparing data for training VPoser.'%expr_code)
+
+amass_splits = {
+    'vald': ['HumanEva', 'MPI_HDM05', 'SFU', 'MPI_mosh'],
+    'test': ['Transitions_mocap', 'SSM_synced'],
+    'train': ['CMU', 'MPI_Limits', 'TotalCapture', 'Eyes_Japan_Dataset', 'KIT', 'BML', 'EKUT', 'TCD_handMocap', 'ACCAD']
+}
+amass_splits['train'] = list(set(amass_splits['train']).difference(set(amass_splits['test'] + amass_splits['vald'])))
+
+prepare_vposer_datasets(amass_splits, amass_dir, vposer_datadir, logger=logger)
+```
