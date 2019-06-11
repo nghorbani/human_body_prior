@@ -26,6 +26,7 @@ import os
 import numpy as np
 from human_body_prior.tools.omni_tools import makepath, log2file
 from human_body_prior.tools.omni_tools import euler2em, em2euler
+from human_body_prior.tools.omni_tools import copy2cpu as c2c
 
 import shutil, sys
 from torch.utils.data import Dataset
@@ -65,7 +66,10 @@ def dump_amass2pytroch(datasets, amass_dir, out_dir, split_name, logger = None, 
         logger = log2file(os.path.join(out_dir, '%s.log' % (log_name)))
         logger('Creating pytorch dataset at %s' % out_dir)
 
-    keep_rate = 0.3 # 30 percent
+    if split_name in ['vald', 'test']:
+        keep_rate = 0.3  # this should be fixed for vald and test datasets
+    elif split_name == 'train':
+        keep_rate = 0.3  # 30 percent, which would give you around 3.5 M training data points
 
     data_pose = []
     data_betas = []
@@ -80,6 +84,7 @@ def dump_amass2pytroch(datasets, amass_dir, out_dir, split_name, logger = None, 
             cdata = np.load(npz_fname)
             N = len(cdata['poses'])
 
+            # skip first and last frames to avoid initial standard poses, e.g. T pose
             cdata_ids = np.random.choice(list(range(int(0.1*N), int(0.9*N),1)), int(keep_rate*0.8*N), replace=False)
             if len(cdata_ids)<1: continue
 
@@ -128,6 +133,8 @@ class AMASS_Augment(Dataset):
 
     def fetch_data(self, idx):
         sample = {k: self.ds[k][idx] for k in self.ds.keys()}
+        from human_body_prior.train.vposer_smpl import VPoser
+        sample['pose_matrot'] = VPoser.aa2matrot(sample['pose'].view([1,1,-1,3])).view(1,-1)
 
         return sample
 
@@ -139,78 +146,72 @@ def prepare_vposer_datasets(amass_splits, amass_dir, vposer_datadir, logger=None
         logger = log2file(os.path.join(vposer_datadir, '%s.log' % (log_name)))
         logger('Creating pytorch dataset at %s' % vposer_datadir)
 
-    logger('Step 1: get SMPL parameters from AMASS by specific splits')
-    final_dsdir = os.path.join(vposer_datadir, 'final_dsdir')
-    # vposer_interm_datadir = os.path.join(vposer_datadir, 'intermediate_files')
+    stageI_outdir = os.path.join(vposer_datadir, 'stage_I')
+
+    shutil.copy2(sys.argv[0], os.path.join(vposer_datadir, os.path.basename(sys.argv[0])))
+
+    logger('Stage I: Fetch data from AMASS npz files')
 
     for split_name, datasets in amass_splits.items():
-        if os.path.exists(os.path.join(final_dsdir, split_name, 'pose.pt')): continue
-        dump_amass2pytroch(datasets, amass_dir, final_dsdir, split_name=split_name, logger=logger)
+        if os.path.exists(os.path.join(stageI_outdir, split_name, 'pose.pt')): continue
+        dump_amass2pytroch(datasets, amass_dir, stageI_outdir, split_name=split_name, logger=logger)
 
-    # logger(
-    #     'Step 2: augment data by adding different representation of poses, in parallel and save them into the final_data folder')
-    # from torch.utils.data import DataLoader
-    #
-    # final_dsdir = os.path.join(vposer_datadir, 'final_data')
-    #
-    # batch_size = 512
-    # max_num_epochs = 1  # how much augmentation we would get
-    #
-    # for split_name in amass_splits.keys():
-    #     ds = AMASS_Augment(dataset_dir=os.path.join(vposer_interm_datadir, split_name))
-    #     logger('%s has %d data points!' % (split_name, len(ds)))
-    #     dataloader = DataLoader(ds, batch_size=batch_size, shuffle=True, num_workers=32, drop_last=False)
-    #
-    #     data_all = {}
-    #
-    #     for epoch_num in range(max_num_epochs):
-    #         for bId, bData in enumerate(dataloader):
-    #             for k, v in bData.items():
-    #                 if k in data_all.keys():
-    #                     data_all[k] = torch.cat([data_all[k], v], dim=0)
-    #                 else:
-    #                     data_all[k] = v
-    #
-    #     for k, v in data_all.items():
-    #         torch.save(v, makepath(os.path.join(vposer_datadir, 'final_data', split_name, '%s.pt' % k), isfile=True))
+    logger('Stage II: augment data by noise and save into h5 files to be used in a cross framework scenario.')
+    ## Writing to h5 files is also convinient since appending to files is possible
+    from torch.utils.data import DataLoader
+    import tables as pytables
+    from tqdm import tqdm
 
-    logger('Dumped final pytorch dataset at %s' % final_dsdir)
+    class AMASS_ROW(pytables.IsDescription):
 
+        gender = pytables.Int16Col(1)  # 1-character String
+        pose = pytables.Float32Col(52*3)  # float  (single-precision)
+        pose_matrot = pytables.Float32Col(52*9)  # float  (single-precision)
+        betas = pytables.Float32Col(16)  # float  (single-precision)
+        trans = pytables.Float32Col(3)  # float  (single-precision)
 
-if __name__ == '__main__':
-    # ['CMU', 'Transitions_mocap', 'MPI_Limits', 'SSM_synced', 'TotalCapture', 'Eyes_Japan_Dataset', 'MPI_mosh', 'MPI_HDM05', 'HumanEva', 'ACCAD', 'EKUT', 'SFU', 'KIT', 'H36M', 'TCD_handMocap', 'BML']
+    stageII_outdir = makepath(os.path.join(vposer_datadir, 'stage_II'))
 
-    msg = ''' Using standard AMASS dataset preparation pipeline: 
-    1) Donwload all npz files from https://amass.is.tue.mpg.de/ 
-    2) Convert npz files to pytorch readable pt files. 
-    After this you can either augment this data by using another temporary dataloader to process in parallel 
-    or use this data directly to train your neural networks.
-    3)[optional] If you have augmented your data, dump augmented results into final pt files and use with your dataloader'''
+    batch_size = 256
+    max_num_epochs = 1  # how much augmentation we would get
 
-    dumpmode = 'pytorch'
-    model_type = 'smpl'
-    prior_type = 'VPoser'
+    for split_name in amass_splits.keys():
+        h5_outpath = os.path.join(stageII_outdir, '%s.h5' % split_name)
+        if os.path.exists(h5_outpath): continue
 
-    amass_dir = '/ps/project/amass/20190313/unified_results'
+        ds = AMASS_Augment(dataset_dir=os.path.join(stageI_outdir, split_name))
+        logger('%s has %d data points!' % (split_name, len(ds)))
+        dataloader = DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=32, drop_last=False)
+        with pytables.open_file(h5_outpath, mode="w") as h5file:
+            table = h5file.create_table('/', 'data', AMASS_ROW)
 
-    for ds_name in ['CMU','EKUT', 'MPI_Limits', 'TotalCapture', 'Eyes_Japan_Dataset', 'ACCAD', 'KIT','BML','TCD_handMocap']:
+            for epoch_num in range(max_num_epochs):
+                for bId, bData in tqdm(enumerate(dataloader)):
+                    for i in range(len(bData['trans'])):
+                        for k in bData.keys():
+                            table.row[k] = c2c(bData[k][i])
+                        table.row.append()
+                    table.flush()
 
-        final_datadir = makepath('/ps/project/humanbodyprior/%s/data/004_00_WO_%s/%s/%s' % (prior_type, ds_name.lower().replace(' ',''), model_type, dumpmode))
+    logger('Stage III: dump every thing as a final thing to pt files')
+    # we would like to use pt files because their interface could run in multiple threads
+    stageIII_outdir = makepath(os.path.join(vposer_datadir, 'stage_III'))
 
-        starttime = datetime.now().replace(microsecond=0)
-        log_name = datetime.strftime(starttime, '%Y%m%d_%H%M')
+    for split_name in amass_splits.keys():
+        h5_filepath = os.path.join(stageII_outdir, '%s.h5' % split_name)
+        if not os.path.exists(h5_filepath) : continue
 
-        shutil.copy2(sys.argv[0], os.path.join(final_datadir, os.path.basename(sys.argv[0]).replace('.py', '_%s.py' % log_name)))
+        with pytables.open_file(h5_filepath, mode="r") as h5file:
+            data = h5file.get_node('/data')
+            data_dict = {k:[] for k in data.colnames}
+            for id in range(len(data)):
+                cdata = data[id]
+                for k in data_dict.keys():
+                    data_dict[k].append(cdata[k])
 
-        logger = log2file(os.path.join(final_datadir, '%s.log' % (log_name)))
-        logger(msg)
+        for k,v in data_dict.items():
+            outfname = makepath(os.path.join(stageIII_outdir, split_name, '%s.pt' % k), isfile=True)
+            if os.path.exists(outfname): continue
+            torch.save(torch.from_numpy(np.asarray(v)), outfname)
 
-        amass_splits = {
-            'vald': ['HumanEva', 'MPI_HDM05', 'SFU', 'MPI_mosh'],
-            'test': ['Transitions_mocap', 'SSM_synced'],
-            'train': list(set(['CMU','EKUT', 'MPI_Limits', 'TotalCapture', 'Eyes_Japan_Dataset', 'ACCAD', 'KIT','BML','TCD_handMocap']).difference(set([ds_name])))
-            # 'train':[ds_name]
-        }
-        amass_splits['train'] = list(set(amass_splits['train']).difference(set(amass_splits['test'] + amass_splits['vald'])))
-
-        prepare_vposer_datasets(amass_splits, amass_dir, final_datadir, logger=logger)
+    logger('Dumped final pytorch dataset at %s' % stageIII_outdir)
