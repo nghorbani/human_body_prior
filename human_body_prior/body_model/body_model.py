@@ -23,12 +23,11 @@
 # 2018.12.13
 
 import numpy as np
-from human_body_prior.body_model.lbs import lbs
 
 import torch
 import torch.nn as nn
 
-from human_body_prior.tools.omni_tools import copy2cpu as c2c
+from human_body_prior.body_model.lbs import lbs
 
 
 class BodyModel(nn.Module):
@@ -179,6 +178,7 @@ class BodyModel(nn.Module):
         self.batch_size = batch_size
 
     def r(self):
+        from human_body_prior.tools.omni_tools import copy2cpu as c2c
         return c2c(self.forward().v)
 
     def forward(self, root_orient=None, pose_body = None, pose_hand=None, pose_jaw=None, pose_eye=None, betas = None, trans = None, **kwargs):
@@ -273,7 +273,7 @@ class BodyModelWithPoser(BodyModel):
             if self.model_type == 'smpl':
                 from human_body_prior.tools.model_loader import load_vposer as poser_loader
 
-                self.poser_body_pt, self.poser_body_ps = poser_loader(smpl_exp_dir, model_type='smpl')
+                self.poser_body_pt, self.poser_body_ps = poser_loader(smpl_exp_dir)
                 self.poser_body_pt.to(self.trans.device)
 
                 poZ_body = torch.tensor(np.zeros([self.batch_size, self.poser_body_ps.latentD]), requires_grad=True,
@@ -286,7 +286,7 @@ class BodyModelWithPoser(BodyModel):
 
                 from human_body_prior.tools.model_loader import load_vposer as poser_loader
                 # body
-                self.poser_body_pt, self.poser_body_ps = poser_loader(smpl_exp_dir, model_type='smpl')
+                self.poser_body_pt, self.poser_body_ps = poser_loader(smpl_exp_dir)
                 self.poser_body_pt.to(self.trans.device)
 
                 poZ_body = self.pose_body.new(np.zeros([self.batch_size, self.poser_body_ps.latentD]))
@@ -294,14 +294,14 @@ class BodyModelWithPoser(BodyModel):
                 self.pose_body.requires_grad = False
 
                 # hand left
-                self.poser_handL_pt, self.poser_handL_ps = poser_loader(mano_exp_dir, model_type='mano_left')
+                self.poser_handL_pt, self.poser_handL_ps = poser_loader(mano_exp_dir)
                 self.poser_handL_pt.to(self.trans.device)
 
                 poZ_handL = self.pose_hand.new(np.zeros([self.batch_size, self.poser_handL_ps.latentD]))
                 self.register_parameter('poZ_handL', nn.Parameter(poZ_handL, requires_grad=True))
 
                 # hand right
-                self.poser_handR_pt, self.poser_handR_ps = poser_loader(mano_exp_dir, model_type='mano_right')
+                self.poser_handR_pt, self.poser_handR_ps = poser_loader(mano_exp_dir)
                 self.poser_handR_pt.to(self.trans.device)
 
                 poZ_handR = self.pose_hand.new(np.zeros([self.batch_size, self.poser_handR_ps.latentD]))
@@ -311,7 +311,7 @@ class BodyModelWithPoser(BodyModel):
             elif self.model_type in ['mano_left', 'mano_right']:
                 from human_body_prior.tools.model_loader import load_vposer as poser_loader
 
-                self.poser_hand_pt, self.poser_hand_ps = poser_loader(mano_exp_dir, model_type=self.model_type)
+                self.poser_hand_pt, self.poser_hand_ps = poser_loader(mano_exp_dir)
                 self.poser_hand_pt.to(self.trans.device)
 
                 poZ_hand = self.pose_hand.new(np.zeros([self.batch_size, self.poser_hand_ps.latentD]))
@@ -361,20 +361,3 @@ class BodyModelWithPoser(BodyModel):
                     pose_handL = self.poser_handL_pt.decode(self.poZ_handL, output_type='aa').view(self.batch_size, -1)
                     pose_handR = self.poser_handR_pt.decode(self.poZ_handR, output_type='aa').view(self.batch_size, -1)
                     self.pose_hand.data[:] = torch.cat([pose_handL, pose_handR], dim=1)
-
-
-if __name__ == '__main__':
-    import trimesh
-
-    bm_path = '/ps/project/common/moshpp/smpl/locked_head/female/model.npz'
-
-    smpl_exp_dir = '/home/nghorbani/code-repos/human_body_prior/expriments/VPoser/smpl/pytorch/0020_06_amass'
-
-    bm = BodyModelWithPoser(bm_path=bm_path, batch_size=1, model_type='smpl', poser_type='vposer', smpl_exp_dir=smpl_exp_dir).to('cuda')
-    bm.randomize_pose()
-
-    vertices = c2c(bm.forward().v)[0]
-    faces = c2c(bm.f)
-
-    mesh = trimesh.base.Trimesh(vertices, faces).show()
-
