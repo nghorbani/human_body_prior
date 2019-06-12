@@ -1,4 +1,4 @@
-# VPoser pose space for SMPL body model
+# VPoser PoZ Space for Body Models
 The original body pose space of [SMPL](http://smpl.is.tue.mpg.de/) and [SMPL-X](https://smpl-x.is.tue.mpg.de/) 
 (jointly refered to SMPL) are not bounded to natural human pose space. That means you can put a vector value 
 as the pose of a SMPL body model and get a messed up body, that might not even look like a human.

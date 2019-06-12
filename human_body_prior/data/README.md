@@ -1,4 +1,4 @@
-# Preparing the training dataset
+# Preparing VPoser Training Dataset
 The Human Body Prior, VPoser, presented here is trained on  [AMASS](https://amass.is.tue.mpg.de/) dataset. 
 AMASS is a large collection of human marker based optical mocap data as [SMPL](http://smpl.is.tue.mpg.de/) body model parameters.
 VPoser code here is implemented in [PyTorch](https://pytorch.org/), therefore, the data preparation code, 

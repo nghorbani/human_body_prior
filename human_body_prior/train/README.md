@@ -1,4 +1,4 @@
-# Train VPoser from scratch
+# Train VPoser from Scratch
 You can train you own VPoser using the *vposer_smpl.py* code. First you would need to download the 
 [AMASS](https://amass.is.tue.mpg.de/) dataset, then following the [data preparation tutorial](../data/README.md)
 prepare the data for training. Afterwards, you can use the following code snippet to train your vposer:
