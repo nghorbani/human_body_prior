@@ -26,8 +26,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from human_body_prior.body_model.lbs import lbs
-
+from smplx.lbs import lbs
 
 class BodyModel(nn.Module):
 
