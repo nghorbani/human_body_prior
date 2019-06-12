@@ -1,7 +1,6 @@
 # Sampling Novel Body Poses from VPoser
 ![alt text](../../github_data/latent_interpolation_1.gif "Interpolation of novel poses on the smoother VPoser latent space.")
 ![alt text](../../github_data/latent_interpolation_2.gif "Interpolation of novel poses on the smoother VPoser latent space.")
-![alt text](../../github_data/latent_interpolation_3.gif "Interpolation of novel poses on the smoother VPoser latent space.")
 
 You can use VPoser to produce novel random poses. 
 This generative model can be potentially used as a synthetic data generator to train other data dependent models.
@@ -27,7 +26,8 @@ from human_body_prior.tutorials.sample_body_pose import sample_vposer
 bm_path = 'PATH_TO_SMPL_model.npz' # obtain from https://smpl-x.is.tue.mpg.de/downloads
 bm = BodyModel(bm_path, 'smpl')
 
-expr_dir = 'TRAINED_MODEL_DIRECTORY' # directory for the trained model along with the model code. obtain from https://smpl-x.is.tue.mpg.de/downloads
+# expr_dir: directory for the trained model along with the model code. obtain from https://smpl-x.is.tue.mpg.de/downloads
+expr_dir = 'TRAINED_MODEL_DIRECTORY'
 sample_vposer(expr_dir, bm, 5, vp_model='snapshot')
 ```
 
