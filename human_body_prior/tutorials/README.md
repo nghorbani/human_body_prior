@@ -1,4 +1,4 @@
-# Sampling novel poses from VPoser
+# Sampling Novel Body Poses from VPoser
 You can use VPoser to produce novel random poses. 
 This generative model can be potentially used as a synthetic data generator to train other data dependent models.
 For this you would need to first obtain a trained VPoser model from https://smpl-x.is.tue.mpg.de/downloads .
@@ -31,3 +31,13 @@ sample_vposer(expr_dir, bm, 5, vp_model='snapshot')
 
 The each column of the first row of the above image are the novel poses, and the following rows are varied rotations for demonstration purpose
 so that you can see the generated body from different angles.
+
+# VPoser Latent Space Interpolation
+You can go one stap further and investigate the smoothness of the latent space of VPoser. 
+To do this you sample two poses poZ<sub>1</sub> and poZ<sub>2</sub> and then use &alpha; &in; [0.,1.] to change the influence 
+of each on the interpolated poZ<sub>inp</sub>, e.g. poZ<sub>inp</sub> = &alpha; * poZ<sub>1</sub> + (1-&alpha;)* poZ<sub>2</sub>.
+The following shows the video of body poses that are result of decoding corresponding varying poZ<sub>inp</sub> values:
+
+![alt text](../../github_data/latent_interpolation_1.gif "Interpolation of novel poses on the smoother VPoser latent space.")
+![alt text](../../github_data/latent_interpolation_2.gif "Interpolation of novel poses on the smoother VPoser latent space.")
+![alt text](../../github_data/latent_interpolation_3.gif "Interpolation of novel poses on the smoother VPoser latent space.")
