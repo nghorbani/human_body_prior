@@ -34,7 +34,7 @@ from human_body_prior.body_model.body_model import BodyModel
 from human_body_prior.mesh.mesh_viewer import MeshViewer
 from human_body_prior.tools.visualization_tools import imagearray2file, smpl_params2ply
 
-def dump_vposer_samples(bm, pose_body, out_imgpath, save_ply=True):
+def dump_vposer_samples(bm, pose_body, out_imgpath, save_ply=False):
     '''
     
     :param bm: the BodyModel instance

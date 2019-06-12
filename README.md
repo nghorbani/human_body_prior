@@ -3,14 +3,14 @@
 ## Description
 Human joint configuration, also called as pose, is restricted by biomechanics of our body. 
 Utilizing these constrains accuratly would be a corner stone of many computer vision tasks, 
-such as estimating 3D human body parameters from 2D keypoints, detecting anomolies, and etc.
+such as estimating 3D human body parameters from 2D keypoints, detecting anomalies, and etc.
 
 Here we present a method that is used in [SMPLify-X](https://smpl-x.is.tue.mpg.de/). 
 Our variational human pose prior, named as VPoser, has the following features: 
  - is end-to-end differentiable
- - provides a way to penalizes impossible poses while allowing possible ones
+ - provides a way to penalize impossible poses while allowing possible ones
  - effectively considers interdependency of configurations of the joints
- - intorduces a more efficient, and lower dimensional representation for human pose
+ - introduces an efficient, low-dimensional representation for human pose
  - can be used as a generative source for data dependent tasks
 
 ## Table of Contents
@@ -71,7 +71,7 @@ then please follow its respective citation guideline.
 ## License
 
 Software Copyright License for **non-commercial scientific research purposes**.
-Please read carefully the [terms and conditions](https://github.com/vchoutas/smplx/blob/master/LICENSE) and any accompanying documentation before you download and/or use the SMPL-X/SMPLify-X model, data and software, (the "Model & Software"), including 3D meshes, blend weights, blend shapes, textures, software, scripts, and animations. By downloading and/or using the Model & Software (including downloading, cloning, installing, and any other use of this github repository), you acknowledge that you have read these terms and conditions, understand them, and agree to be bound by them. If you do not agree with these terms and conditions, you must not download and/or use the Model & Software. Any infringement of the terms of this agreement will automatically terminate your rights under this [License](./LICENSE).
+Please read carefully the [terms and conditions](./LICENSE) and any accompanying documentation before you download and/or use the SMPL-X/SMPLify-X model, data and software, (the "Model & Software"), including 3D meshes, blend weights, blend shapes, textures, software, scripts, and animations. By downloading and/or using the Model & Software (including downloading, cloning, installing, and any other use of this github repository), you acknowledge that you have read these terms and conditions, understand them, and agree to be bound by them. If you do not agree with these terms and conditions, you must not download and/or use the Model & Software. Any infringement of the terms of this agreement will automatically terminate your rights under this [License](./LICENSE).
 
 ## Contact
 The code in this repository is developed by [Nima Ghorbani](https://ps.is.tuebingen.mpg.de/person/nghorbani).
