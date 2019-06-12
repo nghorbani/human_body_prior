@@ -39,5 +39,8 @@ so that you can see the generated body from different angles.
 # VPoser Latent Space Interpolation
 You can go one stap further and investigate the smoothness of the latent space of VPoser. 
 To do this you sample two poses poZ<sub>1</sub> and poZ<sub>2</sub> and then use &alpha; &in; [0.,1.] to change the influence 
-of each on the interpolated poZ<sub>inp</sub>, e.g. poZ<sub>inp</sub> = &alpha; * poZ<sub>1</sub> + (1-&alpha;)* poZ<sub>2</sub>.
+of each on the interpolated poZ<sub>inp</sub>, e.g.
+ 
+poZ<sub>inp</sub> = &alpha; * poZ<sub>1</sub> + (1-&alpha;)* poZ<sub>2</sub>.
+
 The header animations show the video of body poses that are result of decoding corresponding varying poZ<sub>inp</sub> values.
