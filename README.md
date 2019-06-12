@@ -77,6 +77,8 @@ Please read carefully the [terms and conditions](https://github.com/vchoutas/smp
 
 If you have any questions you can contact us at [smplx@tuebingen.mpg.de](mailto:smplx@tuebingen.mpg.de).
 
+## Commercial licensing opportunities
+For commercial licensing, contact ps-licensing@tue.mpg.de
 
 ## Acknowledgments
 We thank authors of [AMASS](https://amass.is.tue.mpg.de/) for their early release of their data to us for this project.
