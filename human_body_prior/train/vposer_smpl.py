@@ -228,7 +228,7 @@ class VPoserTrainer:
         params_count = sum(p.numel() for p in varlist if p.requires_grad)
         logger('Total Trainable Parameters Count is %2.2f M.' % ((params_count) * 1e-6))
 
-        self.optimizer = optim.Adam(varlist, betas=(0.9, 0.999), lr=ps.base_lr, weight_decay=ps.reg_coef)
+        self.optimizer = optim.Adam(varlist, lr=ps.base_lr, weight_decay=ps.reg_coef)
 
         self.logger = logger
         self.best_loss_total = np.inf

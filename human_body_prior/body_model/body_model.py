@@ -224,7 +224,6 @@ class BodyModel(nn.Module):
                                    shapedirs=shapedirs, posedirs=self.posedirs,
                                    J_regressor=self.J_regressor, parents=self.kintree_table[0].long(),
                                    lbs_weights=self.weights,
-                                   num_joints=int(full_pose.shape[1]/3),
                                    dtype=self.dtype)
 
         Jtr = joints + trans.unsqueeze(dim=1)
