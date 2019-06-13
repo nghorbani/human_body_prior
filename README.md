@@ -1,17 +1,18 @@
 # VPoser: Variational Human Pose Prior
 ![alt text](github_data/vposer_samples.png "Novel Human Poses Sampled From the VPoser.")
 ## Description
-Human joint configuration, also called as pose, is restricted by biomechanics of our body. 
-Utilizing these constrains accuratly would be a corner stone of many computer vision tasks, 
-such as estimating 3D human body parameters from 2D keypoints, detecting anomalies, and etc.
+The articulated 3D pose of the human body is high-dimensional and complex. 
+Many applications make use of a prior distribution over valid human poses, but modeling this distribution is difficult.
+Here we provide a learned distribution trained from a large dataset of human poses represented as SMPL bodies.
 
 Here we present a method that is used in [SMPLify-X](https://smpl-x.is.tue.mpg.de/). 
-Our variational human pose prior, named as VPoser, has the following features: 
+Our variational human pose prior, named VPoser, has the following features: 
+ - defines a prior of SMPL pose parameters
  - is end-to-end differentiable
- - provides a way to penalize impossible poses while allowing possible ones
- - effectively considers interdependency of configurations of the joints
- - introduces an efficient, low-dimensional representation for human pose
- - can be used as a generative source for data dependent tasks
+ - provides a way to penalize impossible poses while admitting valid ones
+ - effectively models correlations among the joints of the body
+ - introduces an efficient, low-dimensional, representation for human pose
+ - can be used to generate valid 3D human poses for data-dependent tasks
 
 ## Table of Contents
   * [Description](#description)
@@ -26,7 +27,7 @@ Our variational human pose prior, named as VPoser, has the following features:
 
 ## Installation
 
-To install the model simply you can:
+To install the model:
 1. To install from PyPi simply run: 
   ```bash
   pip install human_body_prior
@@ -39,13 +40,13 @@ python setup.py install
 
 ## Loading Trained Models
 
-To download the *VPoser* trained models go to the [SMPL-X project website](https://smpl-x.is.tue.mpg.de/) and register to get access to the downloads section. Afterwards, you can follow the [model loading tutorial](human_body_prior/tutorials/README.md) to load and use your trained VPoser models.
+To download the trained *VPoser*  models go to the [SMPL-X project website](https://smpl-x.is.tue.mpg.de/) and register to get access to the downloads section. Afterwards, you can follow the [model loading tutorial](human_body_prior/tutorials/README.md) to load and use your trained VPoser models.
 
 ## Train VPoser
-We train VPoser, using a [variational autoencoder](https://arxiv.org/abs/1312.6114), 
-which learns a latent representation of human pose and regularizes the distribution of the latent code to be a normal distribution.
-We train our prior on the data released by [AMASS](https://amass.is.tue.mpg.de/), 
-namely SMPL pose parameters of various publicly available human motion capture datasets. 
+We train VPoser, using a [variational autoencoder](https://arxiv.org/abs/1312.6114)
+that learns a latent representation of human pose and regularizes the distribution of the latent code to be a normal distribution.
+We train our prior on data from the [AMASS](https://amass.is.tue.mpg.de/) dataset; 
+specifically, the SMPL pose parameters of various publicly available human motion capture datasets. 
 You can follow the [data preparation tutorial](human_body_prior/data/README.md) to learn how to download and prepare AMASS for VPoser.
 Afterwards, you can [train VPoser from scratch](human_body_prior/train/README.md). 
 
@@ -56,7 +57,7 @@ Afterwards, you can [train VPoser from scratch](human_body_prior/train/README.md
 * [Train VPoser from Scratch](human_body_prior/train/README.md)
 
 ## Citation
-Please cite the following paper if you use this code directly or indirectly in your research/projects.
+Please cite the following paper if you use this code directly or indirectly in your research/projects:
 ```
 @inproceedings{SMPL-X:2019,
   title = {Expressive Body Capture: 3D Hands, Face, and Body from a Single Image},
@@ -65,7 +66,7 @@ Please cite the following paper if you use this code directly or indirectly in y
   year = {2019}
 }
 ```
-Also note that if you consider training your own VPoser for your research using AMASS dataset, 
+Also note that if you consider training your own VPoser for your research using the AMASS dataset, 
 then please follow its respective citation guideline.
  
 ## License
@@ -81,5 +82,5 @@ If you have any questions you can contact us at [smplx@tuebingen.mpg.de](mailto:
 For commercial licensing, contact [ps-licensing@tue.mpg.de](mailto:ps-licensing@tue.mpg.de)
 
 ## Acknowledgments
-We thank authors of [AMASS](https://amass.is.tue.mpg.de/) for their early release of their data to us for this project.
-We thank [Partha Ghosh](https://ps.is.tuebingen.mpg.de/person/pghosh) for the helpfull disscussions and insights that helped with this project.
+We thank the authors of [AMASS](https://amass.is.tue.mpg.de/) for their early release of their dataset for this project.
+We thank [Partha Ghosh](https://ps.is.tuebingen.mpg.de/person/pghosh) for disscussions and insights that helped with this project.
