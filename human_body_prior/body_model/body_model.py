@@ -57,7 +57,7 @@ class BodyModel(nn.Module):
         self.dtype = dtype
         self.model_type = model_type
 
-        assert self.model_type in ['smpl', 'smplh', 'smplhf', 'mano_left', 'mano_right'], ValueError('model_type should be in smpl/smplh/smplhf/mano_left/mano_right.')
+        assert self.model_type in ['smpl', 'smplh', 'smplx', 'mano_left', 'mano_right'], ValueError('model_type should be in smpl/smplh/smplx/mano_left/mano_right.')
 
         if params is None: params = {}
 
@@ -90,7 +90,7 @@ class BodyModel(nn.Module):
         shapedirs = smpl_dict['shapedirs'][:, :, :num_betas]
         self.register_buffer('shapedirs', torch.tensor(shapedirs, dtype=dtype))
 
-        if model_type == 'smplhf':
+        if model_type == 'smplx':
             exprdirs = smpl_dict['shapedirs'][:, :, 300:(300+num_expressions)]
             self.register_buffer('exprdirs', torch.tensor(exprdirs, dtype=dtype))
 
@@ -138,7 +138,7 @@ class BodyModel(nn.Module):
         self.register_parameter('root_orient', nn.Parameter(root_orient, requires_grad=True))
 
         #pose_body
-        if model_type in ['smpl', 'smplh', 'smplhf']:
+        if model_type in ['smpl', 'smplh', 'smplx']:
             pose_body = torch.tensor(np.zeros((batch_size, 63)), dtype=dtype, requires_grad=True)
             self.register_parameter('pose_body', nn.Parameter(pose_body, requires_grad=True))
 
@@ -148,14 +148,14 @@ class BodyModel(nn.Module):
         else:
             if model_type in ['smpl']:
                 pose_hand = torch.tensor(np.zeros((batch_size, 1 * 3 * 2)), dtype=dtype, requires_grad=True)
-            elif model_type in ['smplh', 'smplhf']:
+            elif model_type in ['smplh', 'smplx']:
                 pose_hand = torch.tensor(np.zeros((batch_size, 15 * 3 * 2)), dtype=dtype, requires_grad=True)
             elif model_type in ['mano_left', 'mano_right']:
                 pose_hand = torch.tensor(np.zeros((batch_size, 15 * 3)), dtype=dtype, requires_grad=True)
         self.register_parameter('pose_hand', nn.Parameter(pose_hand, requires_grad=True))
 
         # face poses
-        if model_type == 'smplhf':
+        if model_type == 'smplx':
             pose_jaw = torch.tensor(np.zeros((batch_size, 1 * 3)), dtype=dtype, requires_grad=True)
             self.register_parameter('pose_jaw', nn.Parameter(pose_jaw, requires_grad=True))
             pose_eye = torch.tensor(np.zeros((batch_size, 2 * 3)), dtype=dtype, requires_grad=True)
@@ -190,12 +190,12 @@ class BodyModel(nn.Module):
         :param kwargs:
         :return:
         '''
-        assert self.model_type in ['smpl', 'smplh', 'smplhf', 'mano_left', 'mano_right'], ValueError('model_type should be in smpl/smplh/smplhf/mano_left/mano_right.')
+        assert self.model_type in ['smpl', 'smplh', 'smplx', 'mano_left', 'mano_right'], ValueError('model_type should be in smpl/smplh/smplx/mano_left/mano_right.')
         if root_orient is None:  root_orient = self.root_orient
         if self.model_type in ['smplh', 'smpl']:
                 if pose_body is None:  pose_body = self.pose_body
                 if pose_hand is None:  pose_hand = self.pose_hand
-        elif self.model_type == 'smplhf':
+        elif self.model_type == 'smplx':
                 if pose_body is None:  pose_body = self.pose_body
                 if pose_hand is None:  pose_hand = self.pose_hand
                 if pose_jaw is None:  pose_jaw = self.pose_jaw
@@ -208,12 +208,12 @@ class BodyModel(nn.Module):
 
         if self.model_type in ['smplh', 'smpl']:
                 full_pose = torch.cat([root_orient, pose_body, pose_hand], dim=1)
-        elif self.model_type == 'smplhf':
+        elif self.model_type == 'smplx':
                 full_pose = torch.cat([root_orient, pose_body, pose_jaw, pose_eye, pose_hand], dim=1) # orient:3, body:63, jaw:3, eyel:3, eyer:3, handl, handr
         elif self.model_type in ['mano_left', 'mano_right']:
             full_pose = torch.cat([root_orient, pose_hand], dim=1)
 
-        if self.model_type == 'smplhf':
+        if self.model_type == 'smplx':
             shape_components = torch.cat([betas, self.expression], dim=-1)
             shapedirs = torch.cat([self.shapedirs, self.exprdirs], dim=-1)
         else:
@@ -243,7 +243,7 @@ class BodyModel(nn.Module):
         elif self.model_type == 'smplh':
             res.pose_body = pose_body
             res.pose_hand =  pose_hand
-        elif self.model_type == 'smplhf':
+        elif self.model_type == 'smplx':
             res.pose_body = pose_body
             res.pose_hand =  pose_hand
             res.pose_jaw =  pose_jaw
@@ -278,7 +278,7 @@ class BodyModelWithPoser(BodyModel):
                 self.register_parameter('poZ_body', nn.Parameter(poZ_body, requires_grad=True))
                 self.pose_body.requires_grad = False
 
-            elif self.model_type in ['smplh', 'smplhf']:
+            elif self.model_type in ['smplh', 'smplx']:
                 # from experiments.nima.body_prior.tools_pt.load_vposer import load_vposer as poser_loader
 
                 from human_body_prior.tools.model_loader import load_vposer as poser_loader
@@ -323,7 +323,7 @@ class BodyModelWithPoser(BodyModel):
                 new_body = super(BodyModelWithPoser, self).forward(pose_body=pose_body, **kwargs)
                 new_body.poZ_body = self.poZ_body
 
-            elif self.model_type in ['smplh', 'smplhf']:
+            elif self.model_type in ['smplh', 'smplx']:
                 pose_body = self.poser_body_pt.decode(self.poZ_body, output_type='aa').view(self.batch_size, -1)
                 pose_handL = self.poser_handL_pt.decode(self.poZ_handL, output_type='aa').view(self.batch_size, -1)
                 pose_handR = self.poser_handR_pt.decode(self.poZ_handR, output_type='aa').view(self.batch_size, -1)
@@ -348,7 +348,7 @@ class BodyModelWithPoser(BodyModel):
                     self.poZ_body.data[:] = self.poZ_body.new(np.random.randn(*list(self.poZ_body.shape))).detach()
                     self.pose_body.data[:] = self.poser_body_pt.decode(self.poZ_body, output_type='aa').view(self.batch_size, -1)
 
-            elif self.model_type in ['smplh', 'smplhf']:
+            elif self.model_type in ['smplh', 'smplx']:
                 with torch.no_grad():
                     self.poZ_body.data[:] = self.poZ_body.new(np.random.randn(*list(self.poZ_body.shape))).detach()
                     self.poZ_handL.data[:] = self.poZ_handL.new(np.random.randn(*list(self.poZ_handL.shape))).detach()

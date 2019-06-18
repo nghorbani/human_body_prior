@@ -23,8 +23,8 @@ The following shows an example:
 from human_body_prior.body_model.body_model import BodyModel
 from human_body_prior.tutorials.sample_body_pose import sample_vposer
 
-bm_path = 'PATH_TO_SMPL_model.npz' # obtain from https://smpl-x.is.tue.mpg.de/downloads
-bm = BodyModel(bm_path, 'smpl')
+bm_path = 'PATH_TO_SMPLX_model.npz' # obtain from https://smpl-x.is.tue.mpg.de/downloads
+bm = BodyModel(bm_path, 'smplx')
 
 # expr_dir: directory for the trained model along with the model code. obtain from https://smpl-x.is.tue.mpg.de/downloads
 expr_dir = 'TRAINED_MODEL_DIRECTORY'
