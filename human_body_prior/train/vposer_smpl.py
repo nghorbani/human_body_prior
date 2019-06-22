@@ -346,30 +346,24 @@ class VPoserTrainer:
         return loss_total, loss_dict
 
     def perform_training(self, num_epochs=None, message=None):
-        from human_body_prior.tools.training_tools import EarlyStopping
-
         starttime = datetime.now().replace(microsecond=0)
         if num_epochs is None: num_epochs = self.ps.num_epochs
 
         self.logger(
             'Started Training at %s for %d epochs' % (datetime.strftime(starttime, '%Y-%m-%d_%H:%M:%S'), num_epochs))
 
-        vis_bm = BodyModel(self.bm_path, 'smplh', num_betas=16).to(self.comp_device)
+        vis_bm =  BodyModel(self.bm_path, 'smplh', num_betas=16).to(self.comp_device)
         prev_lr = np.inf
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', patience=5)
-        early_stopping = EarlyStopping(patience=20, verbose=False)
-
+        scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=int(num_epochs // 3), gamma=0.5)
         for epoch_num in range(1, num_epochs + 1):
-            train_loss_dict = self.train()
-            eval_loss_dict = self.evaluate()
-
-            scheduler.step(eval_loss_dict['loss_total'])
-
+            scheduler.step()
             cur_lr = self.optimizer.param_groups[0]['lr']
             if cur_lr != prev_lr:
                 self.logger('--- Optimizer learning rate changed from %.2e to %.2e ---' % (prev_lr, cur_lr))
                 prev_lr = cur_lr
             self.epochs_completed += 1
+            train_loss_dict = self.train()
+            eval_loss_dict = self.evaluate()
 
             with torch.no_grad():
                 eval_msg = VPoserTrainer.creat_loss_message(eval_loss_dict, expr_code=self.ps.expr_code,
@@ -395,9 +389,9 @@ class VPoserTrainer:
                                                                 'evald_loss_total': eval_loss_dict['loss_total'], },
                                          self.epochs_completed)
 
-            if early_stopping(eval_loss_dict['loss_total']):
-                self.logger("Early stopping at epoch %d"%self.epochs_completed)
-                break
+            # if early_stopping(eval_loss_dict['loss_total']):
+            #     self.logger("Early stopping at epoch %d"%self.epochs_completed)
+            #     break
 
         endtime = datetime.now().replace(microsecond=0)
 
