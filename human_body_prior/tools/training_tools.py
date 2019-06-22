@@ -22,9 +22,11 @@
 # 2018.01.02
 import numpy as np
 
+import numpy as np
+
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, patience=7, verbose=False):
+    def __init__(self, patience=7):
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
@@ -32,11 +34,7 @@ class EarlyStopping:
             verbose (bool): If True, prints a message for each validation loss improvement.
                             Default: False
         """
-        self.patience = patience
-        self.verbose = verbose
-        self.counter = 0
-        self.best_score = None
-        self.val_loss_min = np.Inf
+        self.reset(patience)
 
     def __call__(self, val_loss):
 
@@ -46,10 +44,16 @@ class EarlyStopping:
             self.best_score = score
         elif score < self.best_score:
             self.counter += 1
-            # print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
-                return True
+                self.early_stop = True
         else:
             self.best_score = score
             self.counter = 0
-        return False
+        return self.early_stop
+
+    def reset(self, patience=7):
+        self.patience = patience
+        self.counter = 0
+        self.best_score = None
+        self.early_stop = False
+        self.val_loss_min = np.Inf
