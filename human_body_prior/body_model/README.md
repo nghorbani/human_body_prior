@@ -13,11 +13,11 @@ To load a SMPL with this pose representation you can use the following snippet:
 ```python
 from human_body_prior.body_model.body_model import BodyModelWithPoser
 
-bm_path = 'PATH_TO_SMPL_model.npz' # obtain from https://smpl-x.is.tue.mpg.de/downloads
+bm_path = 'PATH_TO_SMPLX_model.npz' # obtain from https://smpl-x.is.tue.mpg.de/downloads
 
 smpl_exp_dir = 'TRAINED_MODEL_DIRECTORY' # directory for the trained model along with the model code. obtain from https://smpl-x.is.tue.mpg.de/downloads
 
-bm = BodyModelWithPoser(bm_path=bm_path, batch_size=1, model_type='smpl', poser_type='vposer', smpl_exp_dir=smpl_exp_dir).to('cuda')
+bm = BodyModelWithPoser(bm_path=bm_path, batch_size=1, model_type='smplx', poser_type='vposer', smpl_exp_dir=smpl_exp_dir).to('cuda')
 
 ```
 In the above snippet, *bm* is a BodyModel isntance where the body pose is not represented by body_pose anymore, 
