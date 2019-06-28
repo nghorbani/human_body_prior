@@ -256,8 +256,7 @@ class VPoserTrainer:
 
         self.vis_dorig = {k: data_all[k].to(self.comp_device) for k in data_all.keys()}
 
-        self.bm_path = '/ps/project/common/moshpp/smplh/locked_head/neutral/model.npz'
-        self.bm = BodyModel(self.bm_path, 'smplh', batch_size=self.ps.batch_size, use_posedirs=True).to(self.comp_device)
+        self.bm = BodyModel(self.ps.bm_path, 'smplh', batch_size=self.ps.batch_size, use_posedirs=True).to(self.comp_device)
 
     def train(self):
         self.vposer_model.train()
@@ -352,7 +351,7 @@ class VPoserTrainer:
         self.logger(
             'Started Training at %s for %d epochs' % (datetime.strftime(starttime, '%Y-%m-%d_%H:%M:%S'), num_epochs))
 
-        vis_bm =  BodyModel(self.bm_path, 'smplh', num_betas=16).to(self.comp_device)
+        vis_bm =  BodyModel(self.ps.bm_path, 'smplh', num_betas=16).to(self.comp_device)
         prev_lr = np.inf
         scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=int(num_epochs // 3), gamma=0.5)
         for epoch_num in range(1, num_epochs + 1):
