@@ -25,7 +25,7 @@
 from setuptools import setup, find_packages
 
 setup(name='human_body_prior',
-      version='0.8.2',
+      version='0.8.3',
       packages = find_packages(),
       # packages=['human_body_prior', 'human_body_prior/data', 'human_body_prior/tutorials', 'human_body_prior/models', 'human_body_prior/tools'],
       package_data={'human_body_prior': ['./github_data/*.*']},
@@ -40,7 +40,7 @@ setup(name='human_body_prior',
       license=u"GNU Affero General Public License, version 3",
       install_requires=['torch>=1.1.0', 'tensorboardX>=1.6', 'torchgeometry>=0.1.2', 'opencv-python>=4.1.0.25',
                         'scikit-image>=0.15.0', 'configer>=1.2.3', 'imageio>=2.5.0', 'transforms3d>=0.3.1', 'trimesh',
-                        'smplx'],
+                        'smplx', 'pyrender'],
       classifiers=[
           "Intended Audience :: Developers",
           'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
