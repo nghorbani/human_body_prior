@@ -91,7 +91,7 @@ class BodyModel(nn.Module):
         self.register_buffer('shapedirs', torch.tensor(shapedirs, dtype=dtype))
 
         if model_type == 'smplx':
-            begin_shape_id = smpl_dict['shapedirs'].shape[-1]//2
+            begin_shape_id = 300 if smpl_dict['shapedirs'].shape[-1]>300 else 10
             exprdirs = smpl_dict['shapedirs'][:, :, begin_shape_id:(begin_shape_id+num_expressions)]
             self.register_buffer('exprdirs', torch.tensor(exprdirs, dtype=dtype))
 
