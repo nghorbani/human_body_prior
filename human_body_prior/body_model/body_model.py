@@ -91,7 +91,8 @@ class BodyModel(nn.Module):
         self.register_buffer('shapedirs', torch.tensor(shapedirs, dtype=dtype))
 
         if model_type == 'smplx':
-            exprdirs = smpl_dict['shapedirs'][:, :, 300:(300+num_expressions)]
+            begin_shape_id = smpl_dict['shapedirs'].shape[-1]//2
+            exprdirs = smpl_dict['shapedirs'][:, :, begin_shape_id:(begin_shape_id+num_expressions)]
             self.register_buffer('exprdirs', torch.tensor(exprdirs, dtype=dtype))
 
             expression = torch.tensor(np.zeros((batch_size, num_expressions)), dtype=dtype, requires_grad=True)
@@ -358,3 +359,21 @@ class BodyModelWithPoser(BodyModel):
                     pose_handL = self.poser_handL_pt.decode(self.poZ_handL, output_type='aa').view(self.batch_size, -1)
                     pose_handR = self.poser_handR_pt.decode(self.poZ_handR, output_type='aa').view(self.batch_size, -1)
                     self.pose_hand.data[:] = torch.cat([pose_handL, pose_handR], dim=1)
+
+
+if __name__ == '__main__':
+    import trimesh
+    from human_body_prior.tools.omni_tools import copy2cpu as c2c
+
+    bm_path = '/ps/project/common/moshpp/smpl/locked_head/female/model.npz'
+
+    smpl_exp_dir = '/ps/project/common/vposer/smpl/004_00_WO_accad'
+
+    bm = BodyModelWithPoser(bm_path=bm_path, batch_size=1, model_type='smpl', poser_type='vposer', smpl_exp_dir=smpl_exp_dir).to('cuda')
+    bm.randomize_pose()
+
+    vertices = c2c(bm.forward().v)[0]
+    faces = c2c(bm.f)
+
+    mesh = trimesh.base.Trimesh(vertices, faces).show()
+
