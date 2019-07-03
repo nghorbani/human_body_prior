@@ -51,6 +51,9 @@ You can follow the [data preparation tutorial](human_body_prior/data/README.md) 
 Afterwards, you can [train VPoser from scratch](human_body_prior/train/README.md). 
 
 ## Tutorials
+![alt text](github_data/latent_interpolation_1.gif "Interpolation of novel poses on the smoother VPoser latent space.")
+![alt text](github_data/latent_interpolation_2.gif "Interpolation of novel poses on the smoother VPoser latent space.")
+
 * [VPoser PoZ Space for Body Models](human_body_prior/body_model/README.md)
 * [Sampling Novel Body Poses from VPoser](human_body_prior/tutorials/README.md)
 * [Preparing VPoser Training Dataset](human_body_prior/data/README.md)
