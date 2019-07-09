@@ -24,6 +24,7 @@ Our variational human pose prior, named VPoser, has the following features:
   * [License](#license)
   * [Acknowledgments](#acknowledgments)
   * [Contact](#contact)
+  * [FAQ](https://github.com/nghorbani/human_body_prior/wiki/FAQ)
 
 ## Installation
 
