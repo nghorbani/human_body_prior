@@ -28,15 +28,14 @@ Our variational human pose prior, named VPoser, has the following features:
 
 ## Installation
 
-To install the model:
-1. To install from PyPi simply run: 
-  ```bash
-  pip install human_body_prior
-  ```
-2. Clone this repository and install it using the *setup.py* script: 
+**Install using pip:**
+To install from PyPi simply run: 
 ```bash
-git clone https://github.com/nghorbani/human_body_prior
-python setup.py install
+pip install human_body_prior
+```
+Alternatively you can install from this repository for latest developments:
+```bash
+pip install git+https://github.com/nghorbani/human_body_prior
 ```
 
 ## Loading Trained Models
