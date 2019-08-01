@@ -106,5 +106,5 @@ def points_to_spheres(points, radius=0.01, vc = colors['red']):
     '''
     spheres = []
     for id in range(len(points)):
-        spheres.append(Sphere( center= points[id].reshape(-1,3), radius=radius ).to_mesh( color = vc if not isinstance(vc, list) else vc[id]))
+        spheres.append(Sphere( center= points[id].reshape(-1,3), radius=radius ).to_mesh( color = vc if len(vc)==3 and not isinstance(vc[0], list) else vc[id]))
     return spheres
