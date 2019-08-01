@@ -101,10 +101,10 @@ def points_to_spheres(points, radius=0.01, vc = colors['red']):
 
     :param points: Nx3 numpy array
     :param radius:
-    :param vc:
+    :param vc: either a 3-element normalized RGB vector or a list of them for each point
     :return:
     '''
     spheres = []
     for id in range(len(points)):
-        spheres.append(Sphere( center= points[id].reshape(-1,3), radius=radius ).to_mesh( color = vc ))
+        spheres.append(Sphere( center= points[id].reshape(-1,3), radius=radius ).to_mesh( color = vc if not isinstance(vc, list) else vc[id]))
     return spheres
