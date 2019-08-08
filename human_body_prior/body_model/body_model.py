@@ -261,7 +261,7 @@ class BodyModel(nn.Module):
 
 
 class BodyModelWithPoser(BodyModel):
-    def __init__(self, poser_type, smpl_exp_dir='0020_06', mano_exp_dir=None, **kwargs):
+    def __init__(self, poser_type='vposer', smpl_exp_dir='0020_06', mano_exp_dir=None, **kwargs):
         '''
         :param poser_type: vposer/gposer
         :param kwargs:
