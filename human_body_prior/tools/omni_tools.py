@@ -60,6 +60,7 @@ def log2file(logpath=None, auto_newline = True):
     else:
         fhandle = None
     def _(text):
+        if text is None: return
         if auto_newline:
             if not text.endswith('\n'):
                 text = text + '\n'
