@@ -27,7 +27,7 @@ import torch
 import torch.nn as nn
 
 from smplx.lbs import lbs
-
+# from human_body_prior.body_model.lbs import lbs
 
 class BodyModel(nn.Module):
 
@@ -259,7 +259,6 @@ class BodyModel(nn.Module):
 
         return res
 
-
 class BodyModelWithPoser(BodyModel):
     def __init__(self, poser_type='vposer', smpl_exp_dir='0020_06', mano_exp_dir=None, **kwargs):
         '''
@@ -374,6 +373,117 @@ class BodyModelWithPoser(BodyModel):
                         pose_handR = self.poser_handR_pt.decode(self.poZ_handR, output_type='aa').view(self.batch_size, -1)
                         self.pose_hand.data[:] = torch.cat([pose_handL, pose_handR], dim=1)
 
+    def untagnle_interpenetrations(self, max_collisions=8, sigma=1e-3):
+        bmip = BodyInterpenetration(self, max_collisions=max_collisions, sigma=sigma)
+        old_body_v = self.forward().v.detach()
+        old_poses = [var[1].detach() for var in self.named_parameters() if 'poz' in var[0].lower()]
+        def compute_loss(new_body, new_poses):
+            pose_wt = 1e-6
+            ip_wt = 100.
+            data_wt = 1.e5
+
+            data_loss = data_wt * torch.pow(old_body_v - new_body.v,2).mean(dim=0).sum()
+            pose_loss = pose_wt * torch.cat([torch.pow(pose,2) for pose in new_poses],1).mean(dim=0).sum()
+            ip_loss =  ip_wt * torch.pow(bmip(new_body), 2).mean(dim=0).sum()
+            total_loss = ip_loss + pose_loss + data_loss
+            return total_loss
+
+        def closure(free_vars):
+            new_body = self.forward()
+            loss_total = compute_loss(new_body, new_poses=free_vars)
+            loss_total.backward()
+            return loss_total
+
+        def perform(max_iter=300, ftol=1e-4, gtol=1e-3):
+            cur_ip_loss = bmip(self.forward()).mean().item()
+            if not cur_ip_loss>2.0:
+                print('No need for untangling')
+                return cur_ip_loss
+            else: print(cur_ip_loss)
+
+            free_vars = [var[1] for var in self.named_parameters() if 'poz' in var[0].lower()]
+            # from torch import optim
+            # optimizer = optim.Adam(free_vars, lr=1e-2)
+            # optimizer.zero_grad()
+            # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=int(max_iter // 3), gamma=0.1)
+            from human_body_prior.optimizers.lbfgs_ls import LBFGS
+            # from torch.optim.lbfgs import LBFGS # will adopt this shortly from pytorch 1.2.0
+            optimizer = LBFGS(free_vars, lr=1e-8, max_iter=max_iter, line_search_fn='strong_Wolfe', tolerance_grad=1e-2, tolerance_change=1e-4)
+            optimizer.zero_grad()
+            prev_loss = None
+            # for opt_it in range(max_iter):
+            #     scheduler.step()
+            #     loss = optimizer.step(lambda : closure(free_vars))
+            #
+            #     if opt_it > 0 and prev_loss is not None and ftol > 0:
+            #         loss_rel_change = rel_change(prev_loss, loss.item())
+            #
+            #         if loss_rel_change <= ftol:
+            #             break
+            #
+            #     if all([torch.abs(var.grad.view(-1).max()).item() < gtol for var in free_vars if var.grad is not None]):
+            #         break
+            #
+            #     prev_loss = loss.item()
+            # print max_iter
+            prev_loss = optimizer.step(lambda : closure(free_vars))
+            return bmip(self.forward()).mean().item()
+
+        return perform
+
+class BodyInterpenetration(nn.Module):
+    def __init__(self, bm, max_collisions=8, sigma=1e-3, filter_faces=True):
+        super(BodyInterpenetration, self).__init__()
+        self.bm = bm
+        self.model_type = bm.model_type
+        nv = bm.shapedirs.shape[0]
+        device = bm.f.device
+        if 'cuda' not in str(device): raise NotImplementedError('Interpenetration term is only avaialble for body models on GPU.')
+        from mesh_intersection.bvh_search_tree import BVH
+        from mesh_intersection.loss import DistanceFieldPenetrationLoss
+        self.search_tree = BVH(max_collisions=max_collisions)
+        self.pen_distance = DistanceFieldPenetrationLoss(
+            sigma=sigma, point2plane=False,
+            vectorized=True, penalize_outside=True)
+
+        self.filter_faces = None
+        if filter_faces:
+            if self.model_type == 'mano':
+                import sys
+                sys.stderr.write('Filter faces is not available for MANO model yet!')
+            else:
+                #import cPickle as pickle
+                import pickle
+                from mesh_intersection.filter_faces import FilterFaces
+                # ign_part_pairs: The pairs of parts where collisions will be ignored
+                # here 1: LeftTigh, 2: RightTigh, 6:Spine1, 9:Spine2, 12:Neck, 15:Head, 16:LeftUpperArm, 17:RightUpperArm, 22:Jaw
+                ign_part_pairs = ["9,16", "9,17", "6,16", "6,17", "1,2"] + (["12,15"] if self.model_type in ['smpl', 'smplh'] else ["12,22"])
+                part_segm_fname = './parts_segm/%s/parts_segm.pkl'%('smplh' if self.model_type in ['smpl', 'smplh'] else self.model_type)
+
+                with open(part_segm_fname, 'rb') as faces_parents_file:
+                    face_segm_data = pickle.load(faces_parents_file, encoding='latin1')
+
+                faces_segm = face_segm_data['segm']
+                faces_parents = face_segm_data['parents']
+                # Create the module used to filter invalid collision pairs
+                self.filter_faces = FilterFaces(
+                    faces_segm=faces_segm, faces_parents=faces_parents,
+                    ign_part_pairs=ign_part_pairs).to(device=device)
+
+        batched_f = bm.f.clone().unsqueeze(0).repeat([bm.batch_size, 1, 1]).type(torch.long)
+        self.faces_ids = batched_f + (torch.arange(bm.batch_size, dtype=torch.long).to(device) * nv)[:, None, None]
+
+    def forward(self, bm_forwarded = None, **kwargs):
+        if bm_forwarded is None: bm_forwarded = self.bm.forward(**kwargs)
+        # triangles = new_body.v[self.batched_f]
+        triangles = bm_forwarded.v.view([-1, 3])[self.faces_ids]
+        with torch.no_grad():
+            collision_idxs = self.search_tree(triangles)
+
+        if self.filter_faces is not None: collision_idxs = self.filter_faces(collision_idxs)
+        pen_loss = self.pen_distance(triangles, collision_idxs)
+        return pen_loss
+
 
 if __name__ == '__main__':
     import trimesh
@@ -384,10 +494,12 @@ if __name__ == '__main__':
     smpl_exp_dir = '/ps/project/common/vposer/smpl/004_00_WO_accad'
 
     bm = BodyModelWithPoser(bm_path=bm_path, batch_size=1, model_type='smpl', poser_type='vposer', smpl_exp_dir=smpl_exp_dir).to('cuda')
+
     bm.randomize_pose()
+    untangle = bm.untagnle_interpenetrations()
+    print(untangle())
 
     vertices = c2c(bm.forward().v)[0]
     faces = c2c(bm.f)
 
     mesh = trimesh.base.Trimesh(vertices, faces).show()
-

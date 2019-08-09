@@ -37,3 +37,22 @@ faces = c2c(bm.f)
 
 mesh = trimesh.base.Trimesh(vertices, faces).show()
 ```
+
+# Disentangling Self-Intersecting Novel Poses
+Using VPoser you can sample new poses from the human body pose distribution provided by VPoser. 
+These poses usually don't have artifacts like interpenetration, e.g. self-intersecting vertices.
+However, interpentrating samples might still happen probably due to artifacts in the training set of VPoser, e.g. [AMASS](https://amass.is.tue.mpg.de/). 
+In these cases one can use a tool like [torch-mesh-isect](https://github.com/vchoutas/torch-mesh-isect) to disentangle the interpenetrating parts.
+We have integrated the code for doing this inside the *BodyModelWithPoser* class for convenience:
+```python
+
+bm.randomize_pose()
+
+untangle = bm.untagnle_interpenetrations()
+untangle()
+
+vertices = c2c(bm.forward().v)[0]
+faces = c2c(bm.f)
+
+mesh = trimesh.base.Trimesh(vertices, faces).show()
+```
