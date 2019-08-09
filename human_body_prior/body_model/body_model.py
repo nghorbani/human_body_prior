@@ -439,6 +439,8 @@ class BodyInterpenetration(nn.Module):
         nv = bm.shapedirs.shape[0]
         device = bm.f.device
         if 'cuda' not in str(device): raise NotImplementedError('Interpenetration term is only avaialble for body models on GPU.')
+        try:import mesh_intersection
+        except:raise('Optional package mesh_intersection is required for this functionality. Please install from https://github.com/vchoutas/torch-mesh-isect.')
         from mesh_intersection.bvh_search_tree import BVH
         from mesh_intersection.loss import DistanceFieldPenetrationLoss
         self.search_tree = BVH(max_collisions=max_collisions)
