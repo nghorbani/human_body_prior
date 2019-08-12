@@ -25,7 +25,7 @@
 from setuptools import setup, find_packages
 
 setup(name='human_body_prior',
-      version='0.9.0.0',
+      version='0.9.1.0',
       packages=find_packages(),
       # packages=['human_body_prior', 'human_body_prior/data', 'human_body_prior/tutorials', 'human_body_prior/models', 'human_body_prior/tools'],
       include_package_data=True,
