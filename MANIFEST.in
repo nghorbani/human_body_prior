@@ -1,0 +1,2 @@
+include github_data/*.*
+include human_body_prior/body_model/parts_segm/*/*.*

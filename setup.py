@@ -26,9 +26,9 @@ from setuptools import setup, find_packages
 
 setup(name='human_body_prior',
       version='0.9.0.0',
-      packages = find_packages(),
+      packages=find_packages(),
       # packages=['human_body_prior', 'human_body_prior/data', 'human_body_prior/tutorials', 'human_body_prior/models', 'human_body_prior/tools'],
-      package_data={'human_body_prior': ['./github_data/*.*']},
+      include_package_data=True,
       author='Nima Ghorbani',
       author_email='nima.gbani@gmail.com',
       maintainer='Nima Ghorbani',
@@ -37,16 +37,15 @@ setup(name='human_body_prior',
       description='Variational human pose prior for human pose synthesis and estimation.',
       long_description=open("README.md").read(),
       long_description_content_type="text/markdown",
-      license=u"GNU Affero General Public License, version 3",
       install_requires=['torch==1.1.0', 'tensorboardX>=1.6', 'torchgeometry==0.1.2', 'opencv-python>=4.1.0.25',
                         'scikit-image>=0.15.0', 'configer', 'imageio>=2.5.0', 'transforms3d>=0.3.1', 'trimesh',
                         'smplx', 'pyrender'],
-        dependency_links=[
-        "https://github.com/nghorbani/configer/tarball/master#egg=configer"
-        ],
+      dependency_links=[
+          "https://github.com/nghorbani/configer/tarball/master#egg=configer"
+      ],
       classifiers=[
           "Intended Audience :: Developers",
-          'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+          "Intended Audience :: Researchers",
           "Natural Language :: English",
           "Operating System :: MacOS :: MacOS X",
           "Operating System :: POSIX",
@@ -55,5 +54,5 @@ setup(name='human_body_prior',
           "Operating System :: Microsoft :: Windows",
           "Programming Language :: Python",
           "Programming Language :: Python :: 3",
-          "Programming Language :: Python :: 3.7",],
+          "Programming Language :: Python :: 3.7", ],
       )
