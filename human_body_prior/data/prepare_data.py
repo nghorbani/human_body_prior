@@ -77,7 +77,7 @@ def dump_amass2pytroch(datasets, amass_dir, out_dir, split_name, logger = None, 
     data_markers = []
 
     for ds_name in datasets:
-        npz_fnames = glob.glob(os.path.join(amass_dir, ds_name, '*/*.npz'))
+        npz_fnames = glob.glob(os.path.join(amass_dir, ds_name, '*/*_poses.npz'))
         logger('randomly selecting data points from %s.' % (ds_name))
         for npz_fname in tqdm(npz_fnames):
             cdata = np.load(npz_fname)
