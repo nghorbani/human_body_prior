@@ -17,7 +17,7 @@
 #
 #
 # Code Developed by:
-# Nima Ghorbani <https://www.linkedin.com/in/nghorbani/>
+# Nima Ghorbani <https://nghorbani.github.io/>
 # Vassilis Choutas <https://ps.is.tuebingen.mpg.de/employees/vchoutas> for ContinousRotReprDecoder
 #
 # 2018.01.02

@@ -17,7 +17,7 @@
 #
 #
 # Code Developed by:
-# Nima Ghorbani <https://www.linkedin.com/in/nghorbani/>
+# Nima Ghorbani <https://nghorbani.github.io/>
 #
 # 2019.05.10
 
@@ -25,9 +25,8 @@
 from setuptools import setup, find_packages
 
 setup(name='human_body_prior',
-      version='0.9.1.0',
+      version='0.9.2.0',
       packages=find_packages(),
-      # packages=['human_body_prior', 'human_body_prior/data', 'human_body_prior/tutorials', 'human_body_prior/models', 'human_body_prior/tools'],
       include_package_data=True,
       author='Nima Ghorbani',
       author_email='nima.gbani@gmail.com',
