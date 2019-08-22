@@ -104,7 +104,8 @@ def imagearray2file(img_array, outpath=None, fps=30):
     import cv2
     from human_body_prior.tools.omni_tools import makepath
 
-    makepath(outpath, isfile=True)
+    if outpath is not None:
+        makepath(outpath, isfile=True)
 
     if not isinstance(img_array, np.ndarray) or img_array.ndim < 6:
         raise ValueError('img_array should be a numpy array of shape RxCxTxwidthxheightx3')
@@ -149,14 +150,9 @@ def imagearray2file(img_array, outpath=None, fps=30):
             video.release()
             cv2.destroyAllWindows()
         elif '.mp4' in outpath:
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            video = cv2.VideoWriter(outpath, fourcc, fps, (img_w, img_h), True)
-            for tIdx in range(T):
-                img = out_images[tIdx].astype(np.uint8)
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                video.write(img)
 
-            video.release()
-            cv2.destroyAllWindows()
+            from moviepy.editor import ImageSequenceClip
+            animation = ImageSequenceClip(out_images, fps=fps)
+            animation.write_videofile(outpath)
 
     return out_images

@@ -39,7 +39,7 @@ setup(name='human_body_prior',
       long_description_content_type="text/markdown",
       install_requires=['torch==1.1.0', 'tensorboardX>=1.6', 'torchgeometry==0.1.2', 'opencv-python>=4.1.0.25',
                         'scikit-image>=0.15.0', 'configer', 'imageio>=2.5.0', 'transforms3d>=0.3.1', 'trimesh',
-                        'smplx', 'pyrender'],
+                        'smplx', 'pyrender', 'moviepy'],
       dependency_links=[
           "https://github.com/nghorbani/configer/tarball/master#egg=configer"
       ],
