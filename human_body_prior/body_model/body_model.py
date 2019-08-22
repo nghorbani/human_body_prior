@@ -498,23 +498,3 @@ class BodyInterpenetration(nn.Module):
         if self.filter_faces is not None: collision_idxs = self.filter_faces(collision_idxs)
         pen_loss = self.pen_distance(triangles, collision_idxs)
         return pen_loss
-
-
-if __name__ == '__main__':
-    import trimesh
-    from human_body_prior.tools.omni_tools import copy2cpu as c2c
-
-    bm_path = '/ps/project/common/moshpp/smpl/locked_head/female/model.npz'
-
-    smpl_exp_dir = '/ps/project/common/vposer/smpl/004_00_WO_accad'
-
-    bm = BodyModelWithPoser(bm_path=bm_path, batch_size=1, model_type='smpl', poser_type='vposer', smpl_exp_dir=smpl_exp_dir).to('cuda')
-
-    bm.randomize_pose()
-    untangle = bm.untagnle_interpenetrations()
-    print(untangle())
-
-    vertices = c2c(bm.forward().v)[0]
-    faces = c2c(bm.f)
-
-    mesh = trimesh.base.Trimesh(vertices, faces).show()
