@@ -189,7 +189,7 @@ class BodyModel(nn.Module):
         return c2c(self.forward().v)
 
     def forward(self, root_orient=None, pose_body=None, pose_hand=None, pose_jaw=None, pose_eye=None, betas=None,
-                trans=None, dmpls=None, expression=None, **kwargs):
+                trans=None, dmpls=None, expression=None, return_dict=False, **kwargs):
         '''
 
         :param root_orient: Nx3
@@ -246,30 +246,37 @@ class BodyModel(nn.Module):
         Jtr = joints + trans.unsqueeze(dim=1)
         verts = verts + trans.unsqueeze(dim=1)
 
-        class result_meta(object):
-            pass
-
-        res = result_meta()
-        res.v = verts
-        res.f = self.f
-        res.betas = self.betas
-        res.Jtr = Jtr  # Todo: ik can be made with vposer
+        res = {}
+        res['v'] = verts
+        res['f'] = self.f
+        res['betas'] = self.betas
+        res['Jtr'] = Jtr  # Todo: ik can be made with vposer
 
         if self.model_type == 'smpl':
-            res.pose_body = pose_body
+            res['pose_body'] = pose_body
         elif self.model_type == 'smplh':
-            res.pose_body = pose_body
-            res.pose_hand = pose_hand
+            res['pose_body'] = pose_body
+            res['pose_hand'] = pose_hand
         elif self.model_type == 'smplx':
-            res.pose_body = pose_body
-            res.pose_hand = pose_hand
-            res.pose_jaw = pose_jaw
-            res.pose_eye = pose_eye
+            res['pose_body'] = pose_body
+            res['pose_hand'] = pose_hand
+            res['pose_jaw'] = pose_jaw
+            res['pose_eye'] = pose_eye
         elif self.model_type in ['mano', 'mano']:
-            res.pose_hand = pose_hand
-        res.full_pose = full_pose
+            res['pose_hand'] = pose_hand
+        res['full_pose'] = full_pose
+
+        if not return_dict:
+            class result_meta(object):
+                pass
+
+            res_class = result_meta()
+            for k, v in res.items():
+                res_class.__setattr__(k, v)
+            res = res_class
 
         return res
+
 
 class BodyModelWithPoser(BodyModel):
     def __init__(self, poser_type='vposer', smpl_exp_dir='0020_06', mano_exp_dir=None, **kwargs):
