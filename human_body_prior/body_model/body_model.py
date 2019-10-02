@@ -119,7 +119,7 @@ class BodyModel(nn.Module):
             self.register_buffer('dmpldirs', torch.tensor(dmpldirs, dtype=dtype))
 
         # Regressor for joint locations given shape - 6890 x 24
-        elif '.pkl' in bm_path:
+        if '.pkl' in bm_path:
             self.register_buffer('J_regressor', torch.tensor(smpl_dict['J_regressor'].todense(), dtype=dtype))
         else:
             self.register_buffer('J_regressor', torch.tensor(smpl_dict['J_regressor'], dtype=dtype))
