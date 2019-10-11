@@ -25,7 +25,7 @@
 from setuptools import setup, find_packages
 
 setup(name='human_body_prior',
-      version='0.9.2.0',
+      version='0.9.3.0',
       packages=find_packages(),
       include_package_data=True,
       author='Nima Ghorbani',
