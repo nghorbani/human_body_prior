@@ -74,7 +74,7 @@ class MeshViewer(object):
         for mid, mesh in enumerate(meshes):
             if isinstance(mesh, trimesh.Trimesh):
                 mesh = pyrender.Mesh.from_trimesh(mesh)
-            self.scene.add(mesh, '%s-mesh-%2d'%(group_name,mid))
+            self.scene.add(mesh, '%s-mesh-%2d'%(group_name, mid))
 
     def set_static_meshes(self, meshes): self.set_meshes(meshes, 'static')
     def set_dynamic_meshes(self, meshes): self.set_meshes(meshes, 'dynamic')
@@ -127,13 +127,13 @@ class MeshViewer(object):
         elif self.render_wireframe:
             flags |= RenderFlags.ALL_WIREFRAME
         color_img, depth = self.viewer.render(self.scene, flags=flags)
-        color_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
+        # color_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
 
         return color_img
 
     def save_snapshot(self, fname):
         if not self.use_offscreen:
-            sys.stderr.write('Currently saving snapshots only works with offscreen renderer!\n')
+            sys.stderr.write('Currently saving snapshots only works with off-screen renderer!\n')
             return
         color_img = self.render()
         cv2.imwrite(fname, color_img)
