@@ -33,7 +33,7 @@ __all__ = ['MeshViewer']
 class MeshViewer(object):
 
     def __init__(self, width=1200, height=800, use_offscreen=True):
-        super(MeshViewer, self).__init__()
+        super().__init__()
 
         self.use_offscreen = use_offscreen
         self.render_wireframe = False
