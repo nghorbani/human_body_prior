@@ -56,8 +56,6 @@ class MeshViewer(object):
         else:
             self.viewer = pyrender.Viewer(self.scene, use_raymond_lighting=True, viewport_size=self.figsize, cull_faces=False, run_in_thread=True)
 
-        self.set_background_color(colors['white'])
-
     def set_background_color(self, color=colors['white']):
         self.scene.bg_color = color
 
@@ -120,7 +118,7 @@ class MeshViewer(object):
             if not self.scene.has_node(n):
                 self.scene.add_node(n)#, parent_node=pc)
 
-    def render(self,render_wireframe=None):
+    def render(self, render_wireframe=None):
         from pyrender.constants import RenderFlags
 
         flags = RenderFlags.SHADOWS_DIRECTIONAL | RenderFlags.RGBA
