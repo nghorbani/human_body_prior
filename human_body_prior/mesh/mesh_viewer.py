@@ -118,7 +118,7 @@ class MeshViewer(object):
             if not self.scene.has_node(n):
                 self.scene.add_node(n)#, parent_node=pc)
 
-    def render(self, render_wireframe=None):
+    def render(self, render_wireframe=None, return_depth=False):
         from pyrender.constants import RenderFlags
 
         flags = RenderFlags.SHADOWS_DIRECTIONAL | RenderFlags.RGBA
@@ -127,9 +127,9 @@ class MeshViewer(object):
         elif self.render_wireframe:
             flags |= RenderFlags.ALL_WIREFRAME
         color_img, depth = self.viewer.render(self.scene, flags=flags)
-        # color_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2RGB)
 
-        return color_img
+        return color_img, depth if return_depth else color_img
+
 
     def save_snapshot(self, fname):
         if not self.use_offscreen:
