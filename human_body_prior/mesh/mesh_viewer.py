@@ -43,11 +43,10 @@ class MeshViewer(object):
 
         self.scene = pyrender.Scene(bg_color=colors['white'], ambient_light=(0.3, 0.3, 0.3))
 
-        self.pc = pyrender.PerspectiveCamera(yfov=np.pi / 3.0, aspectRatio=float(width) / height)
-
+        pc = pyrender.PerspectiveCamera(yfov=np.pi / 3.0, aspectRatio=float(width) / height)
         camera_pose = np.eye(4)
         camera_pose[:3, 3] = np.array([0, 0, 2.5])
-        self.scene.add(self.pc, pose=camera_pose, name='pc-camera')
+        self.camera_node = self.scene.add(pc, pose=camera_pose, name='pc-camera')
 
         self.figsize = (width, height)
 
@@ -63,7 +62,7 @@ class MeshViewer(object):
         self.scene.bg_color = color
 
     def update_camera_pose(self, camera_pose):
-        self.scene.set_pose(self.pc, pose=camera_pose)
+        self.scene.set_pose(self.camera_node, pose=camera_pose)
 
     def close_viewer(self):
         if self.viewer.is_active:
