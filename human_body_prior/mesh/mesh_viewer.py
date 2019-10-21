@@ -58,7 +58,7 @@ class MeshViewer(object):
 
         self.set_background_color(colors['white'])
 
-    def set_background_color(self,color=colors['white']):
+    def set_background_color(self, color=colors['white']):
         self.scene.bg_color = color
 
     def update_camera_pose(self, camera_pose):
@@ -123,7 +123,7 @@ class MeshViewer(object):
     def render(self,render_wireframe=None):
         from pyrender.constants import RenderFlags
 
-        flags = RenderFlags.SHADOWS_DIRECTIONAL #| RenderFlags.RGBA
+        flags = RenderFlags.SHADOWS_DIRECTIONAL | RenderFlags.RGBA
         if render_wireframe is not None and render_wireframe==True:
             flags |= RenderFlags.ALL_WIREFRAME
         elif self.render_wireframe:
