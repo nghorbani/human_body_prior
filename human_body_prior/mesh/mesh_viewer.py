@@ -126,7 +126,7 @@ class MeshViewer(object):
             flags |= RenderFlags.ALL_WIREFRAME
         elif self.render_wireframe:
             flags |= RenderFlags.ALL_WIREFRAME
-        color_img = self.viewer.render(self.scene, flags=flags)
+        color_img, depth_img = self.viewer.render(self.scene, flags=flags)
 
         return color_img
 
