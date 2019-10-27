@@ -66,15 +66,22 @@ class MeshViewer(object):
         if self.viewer.is_active:
             self.viewer.close_external()
 
-    def set_meshes(self, meshes, group_name='static'):
+    def set_meshes(self, meshes, group_name='static', poses=[]):
         for node in self.scene.get_nodes():
             if node.name is not None and '%s-mesh'%group_name in node.name:
                 self.scene.remove_node(node)
 
-        for mid, mesh in enumerate(meshes):
-            if isinstance(mesh, trimesh.Trimesh):
-                mesh = pyrender.Mesh.from_trimesh(mesh)
-            self.scene.add(mesh, '%s-mesh-%2d'%(group_name, mid))
+        if len(poses) < 1:
+            for mid, mesh in enumerate(meshes):
+                if isinstance(mesh, trimesh.Trimesh):
+                    mesh = pyrender.Mesh.from_trimesh(mesh)
+                self.scene.add(mesh, '%s-mesh-%2d'%(group_name, mid))
+        else:
+            for mid, iter_value in enumerate(zip(meshes, poses)):
+                mesh, pose = iter_value
+                if isinstance(mesh, trimesh.Trimesh):
+                    mesh = pyrender.Mesh.from_trimesh(mesh)
+                self.scene.add(mesh, '%s-mesh-%2d'%(group_name, mid), pose)
 
     def set_static_meshes(self, meshes): self.set_meshes(meshes, 'static')
     def set_dynamic_meshes(self, meshes): self.set_meshes(meshes, 'dynamic')
