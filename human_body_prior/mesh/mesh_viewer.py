@@ -83,8 +83,8 @@ class MeshViewer(object):
                     mesh = pyrender.Mesh.from_trimesh(mesh)
                 self.scene.add(mesh, '%s-mesh-%2d'%(group_name, mid), pose)
 
-    def set_static_meshes(self, meshes): self.set_meshes(meshes, 'static')
-    def set_dynamic_meshes(self, meshes): self.set_meshes(meshes, 'dynamic')
+    def set_static_meshes(self, meshes, poses=[]): self.set_meshes(meshes, group_name='static', poses=poses)
+    def set_dynamic_meshes(self, meshes, poses=[]): self.set_meshes(meshes, group_name='dynamic', poses=poses)
 
     def _add_raymond_light(self):
         from pyrender.light import DirectionalLight
