@@ -28,7 +28,7 @@ colors = {
     'pink': [.7, .7, .9],
     'purple': [.9, .7, .7],
     'cyan': [.7, .75, .5],
-    'red': [1.0,0.0,0.0],
+    'red': [1.0, 0.0, 0.0],
 
     'green': [.0, 1., .0],
     'yellow': [1., 1., 0],
@@ -43,7 +43,7 @@ colors = {
     'black': np.zeros(3),
     'white': np.ones(3),
 
-    'yellowg': [0.83,1,0],
+    'yellowg': [0.83, 1, 0],
 }
 
 def id_generator(size=13):
