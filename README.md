@@ -46,7 +46,7 @@ please install the optional package [mesh_intersection](https://github.com/vchou
 
 ## Loading Trained Models
 
-To download the trained *VPoser*  models go to the [SMPL-X project website](https://smpl-x.is.tue.mpg.de/) and register to get access to the downloads section. Afterwards, you can follow the [model loading tutorial](human_body_prior/tutorials/README.md) to load and use your trained VPoser models.
+To download the trained *VPoser*  models go to the [SMPL-X project website](https://smpl-x.is.tue.mpg.de/) and register to get access to the downloads section. Afterwards, you can follow the [model loading tutorial](notebooks/vposer_poZ.ipynb) to load and use your trained VPoser models.
 
 ## Train VPoser
 We train VPoser, using a [variational autoencoder](https://arxiv.org/abs/1312.6114)
@@ -60,8 +60,8 @@ Afterwards, you can [train VPoser from scratch](human_body_prior/train/README.md
 ![alt text](github_data/latent_interpolation_1.gif "Interpolation of novel poses on the smoother VPoser latent space.")
 ![alt text](github_data/latent_interpolation_2.gif "Interpolation of novel poses on the smoother VPoser latent space.")
 
-* [VPoser PoZ Space for Body Models](human_body_prior/body_model/README.md)
-* [Sampling Novel Body Poses from VPoser](human_body_prior/tutorials/README.md)
+* [VPoser PoZ Space for Body Models](notebooks/vposer_poZ.ipynb)
+* [Sampling Novel Body Poses from VPoser](notebooks/vposer_sampling.ipynb)
 * [Preparing VPoser Training Dataset](human_body_prior/data/README.md)
 * [Train VPoser from Scratch](human_body_prior/train/README.md)
 
