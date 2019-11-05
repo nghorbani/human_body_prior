@@ -63,6 +63,8 @@ class BodyModel(nn.Module):
         # -- Load SMPL params --
         if '.npz' in bm_path:
             smpl_dict = np.load(bm_path, encoding='latin1')
+        elif '.pkl' in bm_path:
+            smpl_dict = np.load(bm_path, allow_pickle = True)
         else:
             raise ValueError('bm_path should be either a .pkl nor .npz file')
 
@@ -116,7 +118,10 @@ class BodyModel(nn.Module):
             self.register_buffer('dmpldirs', torch.tensor(dmpldirs, dtype=dtype))
 
         # Regressor for joint locations given shape - 6890 x 24
-        self.register_buffer('J_regressor', torch.tensor(smpl_dict['J_regressor'], dtype=dtype))
+        elif '.pkl' in bm_path:
+            self.register_buffer('J_regressor', torch.tensor(smpl_dict['J_regressor'].todense(), dtype=dtype))
+        else:
+            self.register_buffer('J_regressor', torch.tensor(smpl_dict['J_regressor'], dtype=dtype))
 
         # Pose blend shape basis: 6890 x 3 x 207, reshaped to 6890*30 x 207
         if use_posedirs:
