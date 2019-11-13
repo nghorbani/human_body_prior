@@ -106,3 +106,6 @@ human_body_prior/expriments
 .idea/
 human_body_prior/evaluate
 human_body_prior/cluster
+dowloads/models/
+
+dowloads/vposer_v1_0/
