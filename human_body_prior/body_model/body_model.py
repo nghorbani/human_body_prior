@@ -51,7 +51,7 @@ class BodyModel(nn.Module):
         :param batch_size: number of smpl vertices to get
         :param device: default on gpu
         :param dtype: float precision of the compuations
-        :return: verts, trans, pose, betas
+        :return: verts, trans, pose, betas 
         '''
         # Todo: if params the batchsize should be read from one of the params
 
