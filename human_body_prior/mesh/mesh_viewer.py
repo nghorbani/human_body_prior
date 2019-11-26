@@ -125,10 +125,11 @@ class MeshViewer(object):
             if not self.scene.has_node(n):
                 self.scene.add_node(n)#, parent_node=pc)
 
-    def render(self, render_wireframe=None):
+    def render(self, render_wireframe=None, RGBA=False):
         from pyrender.constants import RenderFlags
 
-        flags = RenderFlags.SHADOWS_DIRECTIONAL | RenderFlags.RGBA
+        flags = RenderFlags.SHADOWS_DIRECTIONAL
+        if RGBA: flags |=  RenderFlags.RGBA
         if render_wireframe is not None and render_wireframe==True:
             flags |= RenderFlags.ALL_WIREFRAME
         elif self.render_wireframe:
