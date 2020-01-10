@@ -36,6 +36,7 @@ Our variational human pose prior, named VPoser, has the following features:
 
 Install from this repository for the latest developments:
 ```bash
+pip install git+https://github.com/nghorbani/configer
 pip install git+https://github.com/nghorbani/human_body_prior
 ```
 
