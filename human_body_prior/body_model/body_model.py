@@ -247,8 +247,7 @@ class BodyModel(nn.Module):
         verts, joints = lbs(betas=shape_components, pose=full_pose, v_template=v_template,
                             shapedirs=shapedirs, posedirs=self.posedirs,
                             J_regressor=self.J_regressor, parents=self.kintree_table[0].long(),
-                            lbs_weights=self.weights,
-                            dtype=self.dtype)
+                            lbs_weights=self.weights)
 
         Jtr = joints + trans.unsqueeze(dim=1)
         verts = verts + trans.unsqueeze(dim=1)
