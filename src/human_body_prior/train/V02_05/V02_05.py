@@ -19,29 +19,39 @@
 # Code Developed by:
 # Nima Ghorbani <https://nghorbani.github.io/>
 #
-# 2018.01.02
+# 2020.12.12
+import glob
+import glob
+import os.path as osp
 
-import unittest
+from human_body_prior.tools.configurations import load_config
+from human_body_prior.train.vposer_trainer import train_vposer_once
 
-from human_body_prior.train.vposer_smpl import VPoser
-from human_body_prior.tools.omni_tools import copy2cpu as c2c
-from configer import Configer
 
-import numpy as np
+# from pytorch_lightning import Trainer
 
-class TestDistances(unittest.TestCase):
-    def setUp(self):
-        import torch
-        torch.manual_seed(100)
+def main():
+    expr_id = 'V02_05'
 
-    def test_samples(self):
-        ''' given the same network weights, the random pose generator must produce the same pose for a seed'''
-        ps = Configer(default_ps_fname='../human_body_prior/train/V02_00.yaml')
-        vposer = VPoser(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape = ps.data_shape)
-        body_pose_rnd = vposer.sample_poses(num_poses=1, seed=100)
+    default_ps_fname = glob.glob(osp.join(osp.dirname(__file__), '*.yaml'))[0]
 
-        body_pose_gt = np.load('samples/body_pose_rnd.npz')['data']
-        self.assertAlmostEqual(np.square((c2c(body_pose_rnd) - body_pose_gt)).sum(), 0.0)
+    vp_ps = load_config(default_ps_fname)
+
+    vp_ps.train_parms.batch_size = 128
+
+    vp_ps.general.expr_id = expr_id
+
+    total_jobs = []
+    total_jobs.append(vp_ps.toDict().copy())
+
+    print('#training_jobs to be done: {}'.format(len(total_jobs)))
+    if len(total_jobs) == 0:
+        print('No jobs to be done')
+        return
+
+    for job in total_jobs:
+        train_vposer_once(job)
+
 
 if __name__ == '__main__':
-    unittest.main()
+    main()

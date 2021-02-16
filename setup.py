@@ -25,22 +25,27 @@
 from setuptools import setup, find_packages
 
 setup(name='human_body_prior',
-      version='0.9.3.0',
-      packages=find_packages(),
+      version='2.0.1.0',
+      packages=find_packages('src'),
+      package_dir={'': 'src'},
       include_package_data=True,
-      author='Nima Ghorbani',
-      author_email='nima.gbani@gmail.com',
+      data_files=[('human_body_prior/support_data', 
+                                                ['support_data/latent_interpolation_1.gif',
+                                                 'support_data/latent_interpolation_2.gif', 
+                                                 'support_data/tutorial_sample_body_pose.png', 
+                                                 'support_data/vposer_samples.png'])],
+
+
+      author=['Nima Ghorbani',],
+      author_email=['nima.gbani@gmail.com'],
       maintainer='Nima Ghorbani',
-      maintainer_email='nima.gbani@gmail.com',
+      maintainer_email='nghorbani@tuebingen.mpg.de',
       url='https://github.com/nghorbani/human_body_prior',
       description='Variational human pose prior for human pose synthesis and estimation.',
       long_description=open("README.md").read(),
       long_description_content_type="text/markdown",
-      install_requires=['torch==1.1.0', 'tensorboardX>=1.6', 'torchgeometry==0.1.2', 'opencv-python>=4.1.0.25','configer>=1.4',
-                        'configer', 'imageio>=2.5.0', 'transforms3d>=0.3.1', 'trimesh',
-                        'smplx', 'pyrender', 'moviepy'],
+      install_requires=[],
       dependency_links=[
-          "https://github.com/nghorbani/configer/tarball/1.4.1#egg=configer-1.4.1"
       ],
       classifiers=[
           "Intended Audience :: Developers",

@@ -29,9 +29,10 @@ import trimesh
 
 from human_body_prior.tools.omni_tools import apply_mesh_tranfsormations_
 from human_body_prior.tools.omni_tools import copy2cpu as c2c
-from human_body_prior.tools.omni_tools import colors, makepath
-from human_body_prior.mesh.mesh_viewer import MeshViewer
-from human_body_prior.tools.visualization_tools import imagearray2file, smpl_params2ply
+from human_body_prior.tools.omni_tools import makepath
+from body_visualizer.tools.vis_tools import colors
+from body_visualizer.mesh.mesh_viewer import MeshViewer
+from body_visualizer.tools.vis_tools import imagearray2file
 
 def dump_vposer_samples(bm, pose_body, out_imgpath=False, save_ply=False):
     '''
@@ -70,16 +71,16 @@ def dump_vposer_samples(bm, pose_body, out_imgpath=False, save_ply=False):
         if save_ply:
             im_id = os.path.basename(out_imgpath).split('.')[0]
             out_dir = makepath(os.path.join(os.path.dirname(out_imgpath), '%s_ply'%im_id))
-            smpl_params2ply(bm, out_dir=out_dir, pose_body=pose_body)
+            # smpl_params2ply(bm, out_dir=out_dir, pose_body=pose_body)
 
         print('Saved image: %s' % out_imgpath)
 
     return images
 
 def sample_vposer(expr_dir, bm, num_samples=5, vp_model='snapshot'):
-    from human_body_prior.tools.omni_tools import id_generator, makepath
-    from human_body_prior.tools.model_loader import load_vposer
-    from human_body_prior.tools.omni_tools import copy2cpu
+    from src.human_body_prior.tools import id_generator, makepath
+    from src.human_body_prior.tools import load_vposer
+    from src.human_body_prior.tools import copy2cpu
 
     vposer_pt, ps = load_vposer(expr_dir, vp_model=vp_model)
 

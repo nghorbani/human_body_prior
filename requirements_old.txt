@@ -1,0 +1,8 @@
+torch
+torchgeometry
+transforms3d
+trimesh
+dotmap
+pytorch-lightning==0.9.1rc1
+# -e git@github.com:MPI-IS/configer.git#egg=configer
+-e git://github.com/nghorbani/body_visualizer

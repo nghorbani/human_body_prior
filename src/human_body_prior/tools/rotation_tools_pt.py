@@ -19,29 +19,21 @@
 # Code Developed by:
 # Nima Ghorbani <https://nghorbani.github.io/>
 #
-# 2018.01.02
-
-import unittest
-
-from human_body_prior.train.vposer_smpl import VPoser
-from human_body_prior.tools.omni_tools import copy2cpu as c2c
-from configer import Configer
-
+# 2020.12.12
+import torch
 import numpy as np
 
-class TestDistances(unittest.TestCase):
-    def setUp(self):
-        import torch
-        torch.manual_seed(100)
+def local2global_pose(local_pose, kintree):
+    bs = local_pose.shape[0]
 
-    def test_samples(self):
-        ''' given the same network weights, the random pose generator must produce the same pose for a seed'''
-        ps = Configer(default_ps_fname='../human_body_prior/train/V02_00.yaml')
-        vposer = VPoser(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape = ps.data_shape)
-        body_pose_rnd = vposer.sample_poses(num_poses=1, seed=100)
+    local_pose = local_pose.view(bs, -1, 3, 3)
 
-        body_pose_gt = np.load('samples/body_pose_rnd.npz')['data']
-        self.assertAlmostEqual(np.square((c2c(body_pose_rnd) - body_pose_gt)).sum(), 0.0)
+    global_pose = local_pose.clone()
 
-if __name__ == '__main__':
-    unittest.main()
+    for jId in range(len(kintree)):
+        parent_id = kintree[jId]
+        if parent_id >= 0:
+            global_pose[:, jId] = torch.matmul(global_pose[:, parent_id], global_pose[:, jId])
+
+    return global_pose
+
