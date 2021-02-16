@@ -29,8 +29,9 @@ Our variational human pose prior, named VPoser, has the following features:
 ## Installation
 **Requirements**
 - Python 3.7
-- [PyTorch 1.6.0](https://pytorch.org/get-started/previous-versions/)
-- [Torchgeometry 0.1.2](https://pypi.org/project/torchgeometry/0.1.2/)
+- [PyTorch 1.7.1](https://pytorch.org/get-started)
+
+[comment]: <> (- [Torchgeometry 0.1.2]&#40;https://pypi.org/project/torchgeometry/0.1.2/&#41;)
 - [Pyrender](https://pyrender.readthedocs.io/en/latest/install/index.html#osmesa) and [Body Visualizer](https://github.com/nghorbani/body_visualizer
 ) for visualizations
 
@@ -49,21 +50,29 @@ pip install git@git+https://github.com/MPI-IS/configer
 
 ## Loading Trained Models
 
-To download the trained *VPoser*  models go to the [SMPL-X project website](https://smpl-x.is.tue.mpg.de/) and register to get access to the downloads section. Afterwards, you can follow the [model loading tutorial](notebooks/vposer_poZ.ipynb) to load and use your trained VPoser models.
+To download the trained *VPoser*  models go to the [SMPL-X project website](https://smpl-x.is.tue.mpg.de/) 
+and register to get access to the downloads section. Afterwards, you can follow the 
+[model loading tutorial](notebooks/vposer.ipynb) to load and use your trained VPoser models.
 
 ## Train VPoser
-We train VPoser, using a [variational autoencoder](https://arxiv.org/abs/1312.6114)
-that learns a latent representation of human pose and regularizes the distribution of the latent code to be a normal distribution.
-We train our prior on data from the [AMASS](https://amass.is.tue.mpg.de/) dataset; 
-specifically, the SMPL pose parameters of various publicly available human motion capture datasets. 
-You can follow the [data preparation tutorial](src/human_body_prior/data/README.md) to learn how to download and prepare AMASS for VPoser.
-Afterwards, you can [train VPoser from scratch](src/human_body_prior/train/README.md). 
+We train VPoser, as a [variational autoencoder](https://arxiv.org/abs/1312.6114)
+that learns a latent representation of human pose and regularizes the distribution of the latent code 
+to be a normal distribution.
+We train our prior on data from the [AMASS](https://amass.is.tue.mpg.de/) dataset.
+
+[comment]: <> (specifically, the SMPL pose parameters of various publicly available human motion capture datasets. )
+
+[comment]: <> (You can follow the [data preparation tutorial]&#40;src/human_body_prior/data/README.md&#41; to learn how to )
+
+[comment]: <> (download and prepare AMASS for VPoser.)
+
+[comment]: <> (Afterwards, you can [train VPoser from scratch]&#40;src/human_body_prior/train/README.md&#41;. )
 
 ## Tutorials
 ![alt text](support_data/latent_interpolation_1.gif "Interpolation of novel poses on the smoother VPoser latent space.")
 ![alt text](support_data/latent_interpolation_2.gif "Interpolation of novel poses on the smoother VPoser latent space.")
 
-* [VPoser Body PoZ Space for SMPL Body Model Family](notebooks/vposer_poZ.ipynb)
+* [VPoser Body PoZ Space for SMPL Body Model Family](notebooks/vposer.ipynb)
 * [Sampling Novel Body Poses with VPoser](notebooks/vposer_sampling.ipynb)
 
 [comment]: <> (* [Preparing VPoser Training Dataset]&#40;src/human_body_prior/data/README.md&#41;)
