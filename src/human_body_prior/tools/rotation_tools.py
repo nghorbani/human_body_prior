@@ -24,6 +24,22 @@ import numpy as np
 
 from torch.nn import functional as F
 from human_body_prior.tools import tgm_conversion as tgm
+import torch
+
+def local2global_pose(local_pose, kintree):
+    bs = local_pose.shape[0]
+
+    local_pose = local_pose.view(bs, -1, 3, 3)
+
+    global_pose = local_pose.clone()
+
+    for jId in range(len(kintree)):
+        parent_id = kintree[jId]
+        if parent_id >= 0:
+            global_pose[:, jId] = torch.matmul(global_pose[:, parent_id], global_pose[:, jId])
+
+    return global_pose
+
 def em2euler(em):
     '''
 

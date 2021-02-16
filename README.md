@@ -1,4 +1,5 @@
-# VPoser: Variational Human Pose Prior
+# VPoser: Variational Human Pose Prior for Body Inverse Kinematics
+
 ![alt text](support_data/vposer_samples.png "Novel Human Poses Sampled From the VPoser.")
 ## Description
 The articulated 3D pose of the human body is high-dimensional and complex. 
@@ -17,7 +18,7 @@ Our variational human pose prior, named VPoser, has the following features:
 ## Table of Contents
   * [Description](#description)
   * [Installation](#installation)
-  * [Loading trained models](#loading-trained-models) 
+[comment]: <> (  * [Loading trained models]&#40;#loading-trained-models&#41; )
   * [Train VPoser](#train-vposer)
   * [Tutorials](#tutorials)
   * [Citation](#citation)
@@ -35,11 +36,18 @@ Our variational human pose prior, named VPoser, has the following features:
 - [Pyrender](https://pyrender.readthedocs.io/en/latest/install/index.html#osmesa) and [Body Visualizer](https://github.com/nghorbani/body_visualizer
 ) for visualizations
 
-Install from this repository for the latest developments:
+[comment]: <> (Install from this repository for the latest developments:)
+
+[comment]: <> (```bash)
+
+[comment]: <> (pip install git+https://github.com/nghorbani/human_body_prior)
+
+[comment]: <> (```)
+
+Clone this repo and run the following from the root folder:
 ```bash
-pip install git+https://github.com/nghorbani/body_visualizer
-pip install git+https://github.com/nghorbani/human_body_prior
-pip install git@git+https://github.com/MPI-IS/configer
+python install -r requirements.txt
+python setup.py develop
 ```
 
 [comment]: <> (**Optional dependencies:**)
@@ -48,11 +56,13 @@ pip install git@git+https://github.com/MPI-IS/configer
 
 [comment]: <> (please install the optional package [mesh_intersection]&#40;https://github.com/vchoutas/torch-mesh-isect&#41;.)
 
-## Loading Trained Models
+[comment]: <> (## Loading Trained Models)
 
-To download the trained *VPoser*  models go to the [SMPL-X project website](https://smpl-x.is.tue.mpg.de/) 
-and register to get access to the downloads section. Afterwards, you can follow the 
-[model loading tutorial](notebooks/vposer.ipynb) to load and use your trained VPoser models.
+[comment]: <> (To download the trained *VPoser*  models go to the [SMPL-X project website]&#40;https://smpl-x.is.tue.mpg.de/&#41; )
+
+[comment]: <> (and register to get access to the downloads section. Afterwards, you can follow the )
+
+[comment]: <> ([model loading tutorial]&#40;notebooks/vposer.ipynb&#41; to load and use your trained VPoser models.)
 
 ## Train VPoser
 We train VPoser, as a [variational autoencoder](https://arxiv.org/abs/1312.6114)
@@ -72,8 +82,17 @@ We train our prior on data from the [AMASS](https://amass.is.tue.mpg.de/) datase
 ![alt text](support_data/latent_interpolation_1.gif "Interpolation of novel poses on the smoother VPoser latent space.")
 ![alt text](support_data/latent_interpolation_2.gif "Interpolation of novel poses on the smoother VPoser latent space.")
 
-* [VPoser Body PoZ Space for SMPL Body Model Family](notebooks/vposer.ipynb)
+* [VPoser Body poZ Space for SMPL Body Model Family](notebooks/vposer.ipynb)
 * [Sampling Novel Body Poses with VPoser](notebooks/vposer_sampling.ipynb)
+
+# Batched SMPL Inverse Kinematics With Learned Body Prior
+[This sample code](notebooks/fit_smpl_to_joints.py) demonstrates a comprehensive inverse kinematics solver for SMPL body family.
+One can define keypoints on the SMPL body, e.g. joints, or any locations on the body surface 
+and fit body model parameters to them while utilizing a learned prior, 
+[VPoser](https://github.com/nghorbani/human_body_prior/tree/v2). Features:
+- Batch enabled
+- Flexible key point definition
+- LBFGS with wolfe line-search and ADAM optimizer already enabled
 
 [comment]: <> (* [Preparing VPoser Training Dataset]&#40;src/human_body_prior/data/README.md&#41;)
 
