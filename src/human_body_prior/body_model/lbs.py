@@ -224,8 +224,7 @@ def lbs(betas, pose, v_template, shapedirs, posedirs, J_regressor, parents,
 
         pose_feature = (rot_mats[:, 1:, :, :] - ident).view([batch_size, -1])
         # (N x P) x (P, V * 3) -> N x V x 3
-        pose_offsets = torch.matmul(pose_feature, posedirs) \
-            .view(batch_size, -1, 3)
+        pose_offsets = torch.matmul(pose_feature, posedirs).view(batch_size, -1, 3)
     else:
         pose_feature = pose[:, 1:].view(batch_size, -1, 3, 3) - ident
         rot_mats = pose.view(batch_size, -1, 3, 3)

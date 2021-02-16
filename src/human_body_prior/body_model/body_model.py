@@ -89,7 +89,12 @@ class BodyModel(nn.Module):
         self.comp_register('shapedirs', torch.tensor(shapedirs, dtype=dtype), persistent=persistant_buffer)
 
         if self.model_type == 'smplx':
-            begin_shape_id = 300 if smpl_dict['shapedirs'].shape[-1] > 300 else 10
+            if smpl_dict['shapedirs'].shape[-1] > 300:
+                begin_shape_id = 300
+            else:
+                begin_shape_id = 10
+                num_expressions = smpl_dict['shapedirs'].shape[-1] - 10
+
             exprdirs = smpl_dict['shapedirs'][:, :, begin_shape_id:(begin_shape_id + num_expressions)]
             self.comp_register('exprdirs', torch.tensor(exprdirs, dtype=dtype), persistent=persistant_buffer)
 
@@ -155,9 +160,9 @@ class BodyModel(nn.Module):
 
     def comp_register(self, name, value, persistent=False):
         if sys.version_info[0] > 2:
-            self.comp_register(name, value, persistent)
+            self.register_buffer(name, value, persistent)
         else:
-            self.comp_register(name, value)
+            self.register_buffer(name, value)
 
     def r(self):
         from human_body_prior.tools.omni_tools import copy2cpu as c2c
