@@ -33,7 +33,11 @@ def exprdir2model(expr_dir):
     assert len(available_ckpts) > 0, ValueError('No checck points found at {}'.format(model_snapshots_dir))
     trained_weigths_fname = available_ckpts[-1]
 
-    model_ps_fname = glob.glob(osp.join('/', '/'.join(trained_weigths_fname.split('/')[:-2]), '*.yaml'))[0]
+    model_ps_fname = glob.glob(osp.join('/', '/'.join(trained_weigths_fname.split('/')[:-2]), '*.yaml'))
+    if len(model_ps_fname) == 0:
+        model_ps_fname = glob.glob(osp.join('/'.join(trained_weigths_fname.split('/')[:-2]), '*.yaml'))
+
+    model_ps_fname = model_ps_fname[0]
     model_ps = load_config(default_ps_fname=model_ps_fname)
 
     model_ps.logging.best_model_fname = trained_weigths_fname

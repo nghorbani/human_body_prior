@@ -21,9 +21,9 @@
 #
 # 2020.12.12
 import numpy as np
-import torchgeometry as tgm
-from torch.nn import functional as F
 
+from torch.nn import functional as F
+from human_body_prior.tools import tgm_conversion as tgm
 def em2euler(em):
     '''
 
