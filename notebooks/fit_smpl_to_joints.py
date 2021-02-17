@@ -89,13 +89,19 @@ ik_engine = IK_Engine(vposer_expr_dir=vposer_expr_dir,
                       stepwise_weights=stepwise_weights,
                       optimizer_args=optimizer_args).to(comp_device)
 
-rnd_frame_ids = np.random.choice(len(target_bm.v), 10, replace=False)
+from human_body_prior.tools.omni_tools import create_list_chunks
+frame_ids = np.arange(len(target_bm.v))
+np.random.shuffle(frame_ids)
+batch_size = 4
 
-target_pts = target_bm.Jtr[rnd_frame_ids,:n_joints].detach().to(comp_device)
-source_pts = SourceKeyPoints(bm=bm_path, n_joints=n_joints, kpts_colors=kpts_colors).to(comp_device)
+for rnd_frame_ids in create_list_chunks(frame_ids, batch_size, overlap_size=0, cut_smaller_batches=False):
 
-ik_res = ik_engine(source_pts, target_pts)
+    print(rnd_frame_ids)
+    target_pts = target_bm.Jtr[rnd_frame_ids,:n_joints].detach().to(comp_device)
+    source_pts = SourceKeyPoints(bm=bm_path, n_joints=n_joints, kpts_colors=kpts_colors).to(comp_device)
 
-ik_res_detached = {k: v.detach() for k, v in ik_res.items()}
-nan_mask = torch.isnan(ik_res_detached['trans']).sum(-1) != 0
-if nan_mask.sum() != 0: raise ValueError('Sum results were NaN!')
+    ik_res = ik_engine(source_pts, target_pts)
+
+    ik_res_detached = {k: v.detach() for k, v in ik_res.items()}
+    nan_mask = torch.isnan(ik_res_detached['trans']).sum(-1) != 0
+    if nan_mask.sum() != 0: raise ValueError('Sum results were NaN!')
