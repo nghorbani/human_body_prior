@@ -19,7 +19,7 @@ VPoser has the following features:
   * [Description](#description)
   * [Installation](#installation)
   * [Tutorials](#tutorials)
-  * [Advanced IK Capabilities](#batched-smpl-inverse-kinematics-with-learned-body-prior)
+  * [Advanced IK Capabilities](#advanced-ik-capabilities)
   * [Train VPoser](#train-vposer)
   * [Citation](#citation)
   * [License](#license)
