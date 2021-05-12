@@ -156,7 +156,7 @@ class BodyModel(nn.Module):
         self.comp_register('init_betas', torch.zeros((1,num_betas), dtype=dtype), persistent=persistant_buffer)
 
         if self.use_dmpl:
-            self.comp_register('init_dmpl', torch.zeros((1,num_dmpls), dtype=dtype), persistent=persistant_buffer)
+            self.comp_register('init_dmpls', torch.zeros((1,num_dmpls), dtype=dtype), persistent=persistant_buffer)
 
     def comp_register(self, name, value, persistent=False):
         if sys.version_info[0] > 2:

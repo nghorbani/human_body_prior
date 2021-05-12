@@ -36,17 +36,16 @@ setup(name='human_body_prior',
                                                  'support_data/vposer_samples.png'])],
 
 
-      author=['Nima Ghorbani',],
-      author_email=['nima.gbani@gmail.com'],
+      author='Nima Ghorbani',
+      author_email='nghorbani@tuebingen.mpg.de',
       maintainer='Nima Ghorbani',
       maintainer_email='nghorbani@tuebingen.mpg.de',
-      url='https://github.com/nghorbani/human_body_prior',
+      url='https://nghorbani.github.io',
       description='Variational human pose prior for human pose synthesis and estimation.',
       long_description=open("README.md").read(),
       long_description_content_type="text/markdown",
       install_requires=[],
-      dependency_links=[
-      ],
+      dependency_links=[],
       classifiers=[
           "Intended Audience :: Developers",
           "Intended Audience :: Researchers",
