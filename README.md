@@ -53,7 +53,7 @@ python setup.py develop
 ## Advanced IK Capabilities
 ![alt text](support_data/SMPL_inverse_kinematics.gif "Batched SMPL Inverse Kinematics With Learned Body Prior")
 
-[This sample code](notebooks/fit_smpl_to_joints.py) demonstrates a comprehensive inverse kinematics solver for SMPL body family.
+[This sample code](notebooks/human_body_ik.py) demonstrates a comprehensive inverse kinematics solver for SMPL body family.
 One can define keypoints on the SMPL body, e.g. joints, or any locations relative to the body surface 
 and fit body model parameters to them while utilizing the efficient learned pose parameterization, 
 [VPoser](https://github.com/nghorbani/human_body_prior/tree/v2). Features:
