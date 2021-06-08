@@ -33,21 +33,21 @@ import sys
 class BodyModel(nn.Module):
 
     def __init__(self,
-                 bm_path,
+                 bm_fname,
                  num_betas=10,
-                 num_dmpls=None, path_dmpl=None,
+                 num_dmpls=None, dmpl_fname=None,
                  num_expressions=80,
                  use_posedirs=True,
                  dtype=torch.float32,
-                 persistant_buffer=True):
+                 persistant_buffer=False):
 
         super(BodyModel, self).__init__()
 
         '''
-        :param bm_path: path to a SMPL model as pkl file
+        :param bm_fname: path to a SMPL model as pkl file
         :param num_betas: number of shape parameters to include.
         :param device: default on gpu
-        :param dtype: float precision of the compuations
+        :param dtype: float precision of the computations
         :return: verts, trans, pose, betas 
         '''
 
@@ -55,25 +55,30 @@ class BodyModel(nn.Module):
 
 
         # -- Load SMPL params --
-        if '.npz' in bm_path:
-            smpl_dict = np.load(bm_path, encoding='latin1')
+        if '.npz' in bm_fname:
+            smpl_dict = np.load(bm_fname, encoding='latin1')
         else:
-            raise ValueError('bm_path should be either a .pkl nor .npz file')
+            raise ValueError('bm_fname should be either a .pkl nor .npz file')
+
+        # these are supposed for later convenient look up
+        self.num_betas = num_betas
+        self.num_dmpls = num_dmpls
+        self.num_expressions = num_expressions
 
         njoints = smpl_dict['posedirs'].shape[2] // 3
-        self.model_type = {69: 'smpl', 153: 'smplh', 162: 'smplx', 45: 'mano', 105: 'animal_horse'}[njoints]
+        self.model_type = {69: 'smpl', 153: 'smplh', 162: 'smplx', 45: 'mano', 105: 'animal_horse', 102: 'animal_dog', }[njoints]
 
-        assert self.model_type in ['smpl', 'smplh', 'smplx', 'mano', 'mano', 'animal_horse'], ValueError(
+        assert self.model_type in ['smpl', 'smplh', 'smplx', 'mano', 'mano', 'animal_horse', 'animal_dog'], ValueError(
             'model_type should be in smpl/smplh/smplx/mano.')
 
         self.use_dmpl = False
         if num_dmpls is not None:
-            if path_dmpl is not None:
+            if dmpl_fname is not None:
                 self.use_dmpl = True
             else:
-                raise (ValueError('path_dmpl should be provided when using dmpls!'))
+                raise (ValueError('dmpl_fname should be provided when using dmpls!'))
 
-        if self.use_dmpl and self.model_type in ['smplx', 'mano', 'animal_horse']: raise (
+        if self.use_dmpl and self.model_type in ['smplx', 'mano', 'animal_horse', 'animal_dog']: raise (
             NotImplementedError('DMPLs only work with SMPL/SMPLH models for now.'))
 
         # Mean template vertices
@@ -102,7 +107,7 @@ class BodyModel(nn.Module):
             self.comp_register('init_expression', expression, persistent=persistant_buffer)
 
         if self.use_dmpl:
-            dmpldirs = np.load(path_dmpl)['eigvec']
+            dmpldirs = np.load(dmpl_fname)['eigvec']
 
             dmpldirs = dmpldirs[:, :, :num_dmpls]
             self.comp_register('dmpldirs', torch.tensor(dmpldirs, dtype=dtype), persistent=persistant_buffer)
@@ -139,6 +144,8 @@ class BodyModel(nn.Module):
             self.comp_register('init_pose_body', torch.zeros((1,63), dtype=dtype), persistent=persistant_buffer)
         elif self.model_type == 'animal_horse':
             self.comp_register('init_pose_body', torch.zeros((1,105), dtype=dtype), persistent=persistant_buffer)
+        elif self.model_type == 'animal_dog':
+            self.comp_register('init_pose_body', torch.zeros((1,102), dtype=dtype), persistent=persistant_buffer)
 
         # pose_hand
         if self.model_type in ['smpl']:
@@ -169,7 +176,7 @@ class BodyModel(nn.Module):
         return c2c(self.forward().v)
 
     def forward(self, root_orient=None, pose_body=None, pose_hand=None, pose_jaw=None, pose_eye=None, betas=None,
-                trans=None, dmpls=None, expression=None, v_template =None, joints=None, v_shaped=None,return_dict=False,  **kwargs):
+                trans=None, dmpls=None, expression=None, v_template =None, joints=None, v_shaped=None, return_dict=False,  **kwargs):
         '''
 
         :param root_orient: Nx3
@@ -181,13 +188,14 @@ class BodyModel(nn.Module):
         :return:
         '''
         batch_size = 1
+        # compute batchsize by any of the provided variables
         for arg in [root_orient,pose_body,pose_hand,pose_jaw,pose_eye,betas,trans, dmpls,expression, v_template,joints]:
             if arg is not None:
                 batch_size = arg.shape[0]
                 break
-            
+
         # assert not (v_template is not None and betas is not None), ValueError('vtemplate and betas could not be used jointly.')
-        assert self.model_type in ['smpl', 'smplh', 'smplx', 'mano', 'animal_horse'], ValueError(
+        assert self.model_type in ['smpl', 'smplh', 'smplx', 'mano', 'animal_horse', 'animal_dog'], ValueError(
             'model_type should be in smpl/smplh/smplx/mano')
         if root_orient is None:  root_orient = self.init_root_orient.expand(batch_size, -1)
         if self.model_type in ['smplh', 'smpl']:
@@ -200,10 +208,10 @@ class BodyModel(nn.Module):
             if pose_eye is None:  pose_eye = self.init_pose_eye.expand(batch_size, -1)
         elif self.model_type in ['mano',]:
             if pose_hand is None:  pose_hand = self.init_pose_hand.expand(batch_size, -1)
-        elif self.model_type in ['animal_horse',]:
+        elif self.model_type in ['animal_horse','animal_dog']:
             if pose_body is None:  pose_body = self.init_pose_body.expand(batch_size, -1)
 
-        if pose_hand is None and self.model_type not in ['animal_horse']:  pose_hand = self.init_pose_hand.expand(batch_size, -1)
+        if pose_hand is None and self.model_type not in ['animal_horse', 'animal_dog']:  pose_hand = self.init_pose_hand.expand(batch_size, -1)
 
         if trans is None: trans = self.init_trans.expand(batch_size, -1)
         if v_template is None: v_template = self.init_v_template.expand(batch_size, -1,-1)
@@ -215,7 +223,7 @@ class BodyModel(nn.Module):
             full_pose = torch.cat([root_orient, pose_body, pose_jaw, pose_eye, pose_hand], dim=-1)  # orient:3, body:63, jaw:3, eyel:3, eyer:3, handl, handr
         elif self.model_type in ['mano', ]:
             full_pose = torch.cat([root_orient, pose_hand], dim=-1)
-        elif self.model_type in ['animal_horse', ]:
+        elif self.model_type in ['animal_horse', 'animal_dog']:
             full_pose = torch.cat([root_orient, pose_body], dim=-1)
 
         if self.use_dmpl:

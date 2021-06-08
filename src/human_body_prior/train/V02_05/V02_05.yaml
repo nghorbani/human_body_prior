@@ -1,7 +1,7 @@
 ---
 body_model:
   gender: neutral
-  bm_path: support_data/dowloads/models/smplx/neutral/model.npz
+  bm_fname: support_data/dowloads/models/smplx/neutral/model.npz
 
 general:
   verbosity: 0

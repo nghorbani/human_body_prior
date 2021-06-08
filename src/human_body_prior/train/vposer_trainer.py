@@ -120,7 +120,7 @@ class VPoserTrainer(LightningModule):
 
         with torch.no_grad():
 
-            self.bm_train = BodyModel(vp_ps.body_model.bm_path)
+            self.bm_train = BodyModel(vp_ps.body_model.bm_fname)
 
         if vp_ps.logging.render_during_training:
             self.renderer = vposer_trainer_renderer(self.bm_train, vp_ps.logging.num_bodies_to_display)

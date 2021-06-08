@@ -47,13 +47,13 @@ python setup.py develop
 ![alt text](support_data/latent_interpolation_1.gif "Interpolation of novel poses on the smoother VPoser latent space.")
 ![alt text](support_data/latent_interpolation_2.gif "Interpolation of novel poses on the smoother VPoser latent space.")
 
-* [VPoser Body poZ Space for SMPL Body Model Family](notebooks/vposer.ipynb)
-* [Sampling Novel Body Poses with VPoser](notebooks/vposer_sampling.ipynb)
+* [VPoser Body poZ Space for SMPL Body Model Family](tutorials/vposer.ipynb)
+* [Sampling Novel Body Poses with VPoser](tutorials/vposer_sampling.ipynb)
 
 ## Advanced IK Capabilities
 ![alt text](support_data/SMPL_inverse_kinematics.gif "Batched SMPL Inverse Kinematics With Learned Body Prior")
 
-[This sample code](notebooks/fit_smpl_to_joints.py) demonstrates a comprehensive inverse kinematics solver for SMPL body family.
+[This sample code](tutorials/fit_smpl_to_joints.py) demonstrates a comprehensive inverse kinematics solver for SMPL body family.
 One can define keypoints on the SMPL body, e.g. joints, or any locations relative to the body surface 
 and fit body model parameters to them while utilizing the efficient learned pose parameterization, 
 [VPoser](https://github.com/nghorbani/human_body_prior/tree/v2). Features:

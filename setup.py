@@ -25,7 +25,7 @@
 from setuptools import setup, find_packages
 
 setup(name='human_body_prior',
-      version='2.0.4.0',
+      version='2.1.2.0',
       packages=find_packages('src'),
       package_dir={'': 'src'},
       include_package_data=True,
@@ -40,7 +40,7 @@ setup(name='human_body_prior',
       author_email='nghorbani@tuebingen.mpg.de',
       maintainer='Nima Ghorbani',
       maintainer_email='nghorbani@tuebingen.mpg.de',
-      url='https://nghorbani.github.io',
+      url='https://github.com/nghorbani/human_body_prior',
       description='Variational human pose prior for human pose synthesis and estimation.',
       long_description=open("README.md").read(),
       long_description_content_type="text/markdown",
