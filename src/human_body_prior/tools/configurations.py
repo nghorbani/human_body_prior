@@ -34,7 +34,7 @@ def load_config(default_ps_fname=None, **kwargs):
 
     default_ps.update(kwargs)
 
-    return DotMap(default_ps)
+    return DotMap(default_ps, _dynamic=False)
 
 def dump_config(data, fname):
     '''
