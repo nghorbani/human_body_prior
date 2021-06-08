@@ -3,7 +3,6 @@
 
 human_body_prior.egg-info/
 
-support_data/dowloads/vposer_v1_0/*
 
 support_data/dowloads/models/smplh/*
 
@@ -16,5 +15,4 @@ support_data/dowloads/models/smplx/*
 *.pyc
 
 support_data/dowloads/vposer_v2_05/*
-
-notebooks/fit_smpl_to_mocap.py
+support_data/dowloads/vposer_v1_0/*
