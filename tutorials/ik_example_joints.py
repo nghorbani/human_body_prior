@@ -53,18 +53,18 @@ class SourceKeyPoints(nn.Module):
         return {'source_kpts':new_body.Jtr[:,:self.n_joints], 'body': new_body}
 
 
-support_dir = '../support_data'
-vposer_expr_dir = osp.join(support_dir,'dowloads/vposer_v2_05') #'TRAINED_MODEL_DIRECTORY'  in this directory the trained model along with the model code exist
-bm_path =  osp.join(support_dir,'dowloads/models/smplx/neutral/model.npz')#'PATH_TO_SMPLX_model.npz'  obtain from https://smpl-x.is.tue.mpg.de/downloads
-sample_amass_fname = osp.join(support_dir, 'dowloads/amass_sample.npz')# a sample npz file from AMASS
+support_dir = '../support_data/dowloads'
+vposer_expr_dir = osp.join(support_dir,'vposer_v2_05') #'TRAINED_MODEL_DIRECTORY'  in this directory the trained model along with the model code exist
+bm_fname =  osp.join(support_dir,'models/smplx/neutral/model.npz')#'PATH_TO_SMPLX_model.npz'  obtain from https://smpl-x.is.tue.mpg.de/downloads
+sample_amass_fname = osp.join(support_dir, 'amass_sample.npz')# a sample npz file from AMASS
 
 comp_device = torch.device('cuda')
 
 sample_amass = np.load(sample_amass_fname)
-print(sample_amass.keys())
+print('sample_amass keys: ', list(sample_amass.keys()))
 n_joints = 22
 
-target_bm = BodyModel(bm_path)(**{
+target_bm = BodyModel(bm_fname)(**{
     'pose_body': torch.tensor(sample_amass['poses'][:,3:66]).type(torch.float),
     'root_orient': torch.tensor(sample_amass['poses'][:,:3]).type(torch.float),
     'trans': torch.tensor(sample_amass['trans']).type(torch.float),
@@ -81,7 +81,7 @@ stepwise_weights = [
     {'data': 10., 'poZ_body': .01, 'betas': .5},
                     ]
 
-optimizer_args = {'type':'LBFGS', 'max_iter':100, 'lr':1, 'tolerance_change': 1e-4, 'history_size':200}
+optimizer_args = {'type':'LBFGS', 'max_iter':300, 'lr':1, 'tolerance_change': 1e-4, 'history_size':200}
 ik_engine = IK_Engine(vposer_expr_dir=vposer_expr_dir,
                       verbosity=2,
                       display_rc= (2, 2),
@@ -98,7 +98,7 @@ for rnd_frame_ids in create_list_chunks(frame_ids, batch_size, overlap_size=0, c
 
     print(rnd_frame_ids)
     target_pts = target_bm.Jtr[rnd_frame_ids,:n_joints].detach().to(comp_device)
-    source_pts = SourceKeyPoints(bm=bm_path, n_joints=n_joints, kpts_colors=kpts_colors).to(comp_device)
+    source_pts = SourceKeyPoints(bm=bm_fname, n_joints=n_joints, kpts_colors=kpts_colors).to(comp_device)
 
     ik_res = ik_engine(source_pts, target_pts)
 
