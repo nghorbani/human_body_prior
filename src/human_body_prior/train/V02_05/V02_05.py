@@ -20,15 +20,12 @@
 # Nima Ghorbani <https://nghorbani.github.io/>
 #
 # 2020.12.12
-import glob
+
 import glob
 import os.path as osp
 
 from human_body_prior.tools.configurations import load_config
 from human_body_prior.train.vposer_trainer import train_vposer_once
-
-
-# from pytorch_lightning import Trainer
 
 def main():
     expr_id = 'V02_05'

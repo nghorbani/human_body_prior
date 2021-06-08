@@ -1,34 +1,41 @@
 # Train VPoser from Scratch
-You can train you own VPoser using the *vposer_smpl.py* code. First you would need to download the 
+To train your own VPoser with new configuration duplicate the provided **V02_05** folder while setting a new experiment ID 
+and change the settings as you desire. 
+First you would need to download the 
 [AMASS](https://amass.is.tue.mpg.de/) dataset, then following the [data preparation tutorial](../data/README.md)
-prepare the data for training. Afterwards, you can use the following code snippet to train your vposer:
+prepare the data for training. 
+Following is a code snippet for training that can be found in the [example training experiment](https://github.com/nghorbani/human_body_prior/blob/master/src/human_body_prior/train/V02_05/V02_05.py):
 
 ```python
-from human_body_prior.train.vposer_smpl import run_vposer_trainer
-from configer import Configer
+import glob
+import os.path as osp
 
-expr_code = 'SOME_UNIQUE_ID'
-args = {
-    'expr_code' : expr_code,
-    'base_lr': 0.005,
+from human_body_prior.tools.configurations import load_config
+from human_body_prior.train.vposer_trainer import train_vposer_once
 
-    'dataset_dir': 'VPOSER_DATA_DIR_PRODUCED_BEFORE',
-    'work_dir': 'BASE_WORKing_DIR/%s'%expr_code, # Later you will give this pass to vposer_loader to load the model
-}
-ps = Configer(default_ps_fname='./V02_00.yaml', **args) # This is the default configuration
+def main():
+    expr_id = 'V02_05'
 
-# Make a message to describe the purpose of this experiment
-expr_message = '\n[%s] %d H neurons, latentD=%d, batch_size=%d,  kl_coef = %.1e\n' \
-               % (ps.expr_code, ps.num_neurons, ps.latentD, ps.batch_size, ps.kl_coef)
-expr_message += '\n'
-ps.expr_message = expr_message
+    default_ps_fname = glob.glob(osp.join(osp.dirname(__file__), '*.yaml'))[0]
 
-run_vposer_trainer(ps)
+    vp_ps = load_config(default_ps_fname)
+
+    vp_ps.train_parms.batch_size = 128
+
+    vp_ps.general.expr_id = expr_id
+
+    total_jobs = []
+    total_jobs.append(vp_ps.toDict().copy())
+
+    print('#training_jobs to be done: {}'.format(len(total_jobs)))
+    if len(total_jobs) == 0:
+        print('No jobs to be done')
+        return
+
+    for job in total_jobs:
+        train_vposer_once(job)
 ``` 
-The above code uses [Configer](https://github.com/nghorbani/configer) to handle configurations. 
-It loads the default settings in *vposer_smpl_defaults.ini* and overloads it with your new args. 
-You can also start the training from the command line:
-```bash
-python3 -m human_body_prior.train.vposer_smpl ./vposer_smpl_defaults.ini
-```
+The above code uses yaml configuration files to handle experiment settings. 
+It loads the default settings in *<expr_id>.yaml* and overloads it with your new args. 
+
 The training code, will dump a log file along with tensorboard readable events file.
