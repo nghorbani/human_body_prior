@@ -53,14 +53,19 @@ python setup.py develop
 ## Advanced IK Capabilities
 ![alt text](support_data/SMPL_inverse_kinematics.gif "Batched SMPL Inverse Kinematics With Learned Body Prior")
 
-[This sample code](tutorials/ik_example_joints.py) demonstrates a comprehensive inverse kinematics solver for SMPL body family.
+Given position of some key points one can find the necessary body joints' rotation configurations via inverse kinematics (IK). 
+The keypoints could either be 3D (joint locations, 3D mocap markers on body surface) or 2D (as in [SMPLify-X](https://smpl-x.is.tue.mpg.de/)).
+We provide a comprehensive IK engine with flexible key point definition interface demonstrated in tutorials: 
+- [IK for 3D joints](tutorials/ik_example_joints.py) 
+- [IK for mocap markers](tutorials/ik_example_mocap.py) 
+
 One can define keypoints on the SMPL body, e.g. joints, or any locations relative to the body surface 
-and fit body model parameters to them while utilizing the efficient learned pose parameterization, 
-[VPoser](https://github.com/nghorbani/human_body_prior). Features:
+and fit body model parameters to them while utilizing the efficient learned pose parameterization of 
+[VPoser](https://github.com/nghorbani/human_body_prior). The supported features are:
 - Batch enabled
 - Flexible key point definition
 - LBFGS with wolfe line-search and ADAM optimizer already enabled
-- No need for initialization (always starts from zero)
+- No need for initializing the body (always starts from zero)
 - Optimizes body pose, translation and body global orientation jointly and iteratively
 
 
