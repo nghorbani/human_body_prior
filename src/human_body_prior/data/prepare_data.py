@@ -119,7 +119,7 @@ def prepare_vposer_datasets(vposer_dataset_dir, amass_splits, amass_dir, logger=
                 if k not in data_fields: data_fields[k] = []
                 data_fields[k].append(data[k])
 
-        for k,v in data_fields.items():
+        for k, v in data_fields.items():
             outpath = makepath(vposer_dataset_dir, split_name, '{}.pt'.format(k), isfile=True)
             v = np.concatenate(v)
             torch.save(torch.tensor(v), outpath)
