@@ -21,24 +21,15 @@
 #
 # 2018.01.02
 
-import os
-import numpy as np
-from human_body_prior.tools.omni_tools import makepath, log2file
-from human_body_prior.tools.omni_tools import copy2cpu as c2c
-
-import shutil, sys
-from torch.utils.data import Dataset
 import glob
-from datetime import datetime
-import torch
-from human_body_prior.tools.rotation_tools import noisy_zrot
 import os.path as osp
+import shutil
+
 import numpy as np
-from human_body_prior.tools.omni_tools import logger_sequencer
-import pickle
+import torch
 from configer import Configer
-from tqdm import tqdm
-# import tables as pytables
+from human_body_prior.tools.omni_tools import logger_sequencer
+from human_body_prior.tools.omni_tools import makepath, log2file
 
 
 def dataset_exists(dataset_dir, split_names=None):
@@ -61,22 +52,22 @@ def dataset_exists(dataset_dir, split_names=None):
 
     done = []
     for split_name in split_names:
-        for k in ['root_orient', 'pose_body']:#, 'betas', 'trans', 'joints']:
-            outfname = os.path.join(dataset_dir, split_name, '%s.pt' % k)
+        for k in ['root_orient', 'pose_body']:  # , 'betas', 'trans', 'joints']:
+            outfname = os.path.join(dataset_dir, split_name, f'{k}.pt')
             done.append(os.path.exists(outfname))
     return np.all(done)
 
-def prepare_vposer_datasets(vposer_dataset_dir, amass_splits, amass_dir, logger=None):
 
+def prepare_vposer_datasets(vposer_dataset_dir, amass_splits, amass_dir, logger=None):
     if dataset_exists(vposer_dataset_dir):
-        if logger is not None: logger('VPoser dataset already exists at {}'.format(vposer_dataset_dir))
+        if logger is not None: logger(f'VPoser dataset already exists at {vposer_dataset_dir}')
         return
 
     ds_logger = log2file(makepath(vposer_dataset_dir, 'dataset.log', isfile=True), write2file_only=True)
     logger = ds_logger if logger is None else logger_sequencer([ds_logger, logger])
 
-    logger('Creating pytorch dataset at %s' % vposer_dataset_dir)
-    logger('Using AMASS body parameters from {}'.format(amass_dir))
+    logger(f'Creating pytorch dataset at {vposer_dataset_dir}')
+    logger(f'Using AMASS body parameters from {amass_dir}')
 
     shutil.copy2(__file__, vposer_dataset_dir)
 
@@ -104,14 +95,15 @@ def prepare_vposer_datasets(vposer_dataset_dir, amass_splits, amass_dir, logger=
                 N = len(cdata['poses'])
 
                 # skip first and last frames to avoid initial standard poses, e.g. T pose
-                cdata_ids = np.random.choice(list(range(int(0.1 * N), int(0.9 * N), 1)), int(keep_rate * 0.8 * N), replace=False)
+                cdata_ids = np.random.choice(list(range(int(0.1 * N), int(0.9 * N), 1)), int(keep_rate * 0.8 * N),
+                                             replace=False)
                 if len(cdata_ids) < 1: continue
                 fullpose = cdata['poses'][cdata_ids].astype(np.float32)
-                yield {'pose_body': fullpose[:,3:66], 'root_orient': fullpose[:,:3]}
+                yield {'pose_body': fullpose[:, 3:66], 'root_orient': fullpose[:, :3]}
 
     for split_name, ds_names in amass_splits.items():
         if dataset_exists(vposer_dataset_dir, split_names=[split_name]): continue
-        logger('Preparing VPoser data for split {}'.format(split_name))
+        logger(f'Preparing VPoser data for split {split_name}')
 
         data_fields = {}
         for data in fetch_from_amass(ds_names):
@@ -124,11 +116,12 @@ def prepare_vposer_datasets(vposer_dataset_dir, amass_splits, amass_dir, logger=
             v = np.concatenate(v)
             torch.save(torch.tensor(v), outpath)
 
-        logger('{} datapoints dumped for split {}. ds_meta_pklpath: {}'.format(len(v), split_name, osp.join(vposer_dataset_dir, split_name)))
+        logger(
+            f'{len(v)} datapoints dumped for split {split_name}. ds_meta_pklpath: {osp.join(vposer_dataset_dir, split_name)}')
 
     Configer(**{
-        'amass_splits':amass_splits.toDict(),
+        'amass_splits': amass_splits.toDict(),
         'amass_dir': amass_dir,
     }).dump_settings(makepath(vposer_dataset_dir, 'settings.ini', isfile=True))
 
-    logger('Dumped final pytorch dataset at %s' % vposer_dataset_dir)
+    logger(f'Dumped final pytorch dataset at {vposer_dataset_dir}')

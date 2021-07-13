@@ -1,6 +1,6 @@
 '''
 This is a ripped code from an version of torchgeometry now called Kornia. Since Kornia has a
-know bug: https://github.com/kornia/kornia/issues/317#issuecomment-751305910
+known bug: https://github.com/kornia/kornia/issues/317#issuecomment-751305910
 in converting rotation representations we use this code until the original bug in Kornia is addressed
 '''
 

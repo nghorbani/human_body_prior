@@ -20,29 +20,35 @@
 # Nima Ghorbani <https://nghorbani.github.io/>
 #
 # 2018.01.02
-import numpy as np
-import random
-import torch
 import os
-import sys
 import os.path as osp
+import random
+import sys
+
+import numpy as np
+import torch
+
 
 def copy2cpu(tensor):
     if isinstance(tensor, np.ndarray): return tensor
     return tensor.detach().cpu().numpy()
 
+
 def create_list_chunks(list_, group_size, overlap_size, cut_smaller_batches=True):
     if cut_smaller_batches:
-        return [list_[i:i + group_size] for i in range(0, len(list_), group_size - overlap_size) if len(list_[i:i + group_size])==group_size]
+        return [list_[i:i + group_size] for i in range(0, len(list_), group_size - overlap_size) if
+                len(list_[i:i + group_size]) == group_size]
     else:
         return [list_[i:i + group_size] for i in range(0, len(list_), group_size - overlap_size)]
 
 
 def trainable_params_count(params):
-    return  sum([p.numel() for p in params if p.requires_grad])
+    return sum([p.numel() for p in params if p.requires_grad])
+
 
 def flatten_list(l):
     return [item for sublist in l for item in sublist]
+
 
 def get_support_data_dir(current_fname=__file__):
     support_data_dir = osp.abspath(current_fname)
@@ -52,6 +58,7 @@ def get_support_data_dir(current_fname=__file__):
     assert osp.exists(support_data_dir)
     return support_data_dir
 
+
 def make_deterministic(seed):
     random.seed(seed)
     torch.manual_seed(seed)
@@ -60,24 +67,28 @@ def make_deterministic(seed):
     os.environ['PYTHONHASHSEED'] = str(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    
+
+
 def id_generator(size=13):
     import string
     import random
     chars = string.ascii_uppercase + string.digits
     return ''.join(random.choice(chars) for _ in range(size))
 
+
 def logger_sequencer(logger_list, prefix=None):
     def post_text(text):
         if prefix is not None: text = '{} -- '.format(prefix) + text
         for logger_call in logger_list: logger_call(text)
+
     return post_text
 
+
 class log2file():
-    def __init__(self,logpath=None, prefix='', auto_newline = True, write2file_only=False):
+    def __init__(self, logpath=None, prefix='', auto_newline=True, write2file_only=False):
         if logpath is not None:
             makepath(logpath, isfile=True)
-            self.fhandle = open(logpath,'a+')
+            self.fhandle = open(logpath, 'a+')
         else:
             self.fhandle = None
 
@@ -108,10 +119,11 @@ def makepath(*args, **kwargs):
     import os
     desired_path = os.path.join(*args)
     if isfile:
-        if not os.path.exists(os.path.dirname(desired_path)):os.makedirs(os.path.dirname(desired_path))
+        if not os.path.exists(os.path.dirname(desired_path)): os.makedirs(os.path.dirname(desired_path))
     else:
         if not os.path.exists(desired_path): os.makedirs(desired_path)
     return desired_path
+
 
 def matrot2axisangle(matrots):
     '''
@@ -130,8 +142,9 @@ def matrot2axisangle(matrots):
             for jIdx in range(n_joints):
                 cur_axisangle.append(cv2.Rodrigues(matrots[mIdx, tIdx, jIdx:jIdx + 1, :].reshape(3, 3))[0].T)
             T_axisangle.append(np.vstack(cur_axisangle)[np.newaxis])
-        out_axisangle.append(np.vstack(T_axisangle).reshape([N,1, -1,3]))
+        out_axisangle.append(np.vstack(T_axisangle).reshape([N, 1, -1, 3]))
     return np.concatenate(out_axisangle, axis=1)
+
 
 def axisangle2matrots(axisangle):
     '''
@@ -140,7 +153,7 @@ def axisangle2matrots(axisangle):
     '''
     import cv2
     batch_size = axisangle.shape[0]
-    axisangle = axisangle.reshape([batch_size,1,-1,3])
+    axisangle = axisangle.reshape([batch_size, 1, -1, 3])
     out_matrot = []
     for mIdx in range(axisangle.shape[0]):
         cur_axisangle = []
@@ -148,7 +161,7 @@ def axisangle2matrots(axisangle):
             a = cv2.Rodrigues(axisangle[mIdx, 0, jIdx:jIdx + 1, :].reshape(1, 3))[0].T
             cur_axisangle.append(a)
 
-        out_matrot.append(np.array(cur_axisangle).reshape([batch_size,1,-1,9]))
+        out_matrot.append(np.array(cur_axisangle).reshape([batch_size, 1, -1, 9]))
     return np.vstack(out_matrot)
 
 
@@ -161,3 +174,6 @@ def apply_mesh_tranfsormations_(meshes, transf):
     '''
     for i in range(len(meshes)):
         meshes[i] = meshes[i].apply_transform(transf)
+
+
+def rm_spaces(in_text): return in_text.replace(' ', '_')
