@@ -20,11 +20,13 @@
 # Nima Ghorbani <https://nghorbani.github.io/>
 #
 # 2020.12.12
-import numpy as np
 
-from torch.nn import functional as F
-from human_body_prior.tools import tgm_conversion as tgm
+
+import numpy as np
 import torch
+from human_body_prior.tools import tgm_conversion as tgm
+from torch.nn import functional as F
+
 
 def local2global_pose(local_pose, kintree):
     bs = local_pose.shape[0]
@@ -39,6 +41,7 @@ def local2global_pose(local_pose, kintree):
             global_pose[:, jId] = torch.matmul(global_pose[:, parent_id], global_pose[:, jId])
 
     return global_pose
+
 
 def em2euler(em):
     '''
@@ -61,7 +64,7 @@ def euler2em(ea):
     '''
     from transforms3d.euler import euler2axangle
     axis, theta = euler2axangle(*ea)
-    return np.array(axis*theta)
+    return np.array(axis * theta)
 
 
 def remove_zrot(pose):
@@ -70,15 +73,17 @@ def remove_zrot(pose):
     pose[:3] = euler2em(noZ).copy()
     return pose
 
+
 def matrot2aa(pose_matrot):
     '''
     :param pose_matrot: Nx3x3
     :return: Nx3
     '''
     bs = pose_matrot.size(0)
-    homogen_matrot = F.pad(pose_matrot, [0,1])
+    homogen_matrot = F.pad(pose_matrot, [0, 1])
     pose = tgm.rotation_matrix_to_angle_axis(homogen_matrot)
     return pose
+
 
 def aa2matrot(pose):
     '''
@@ -86,16 +91,17 @@ def aa2matrot(pose):
     :return: pose_matrot: Nx3x3
     '''
     bs = pose.size(0)
-    num_joints = pose.size(1)//3
-    pose_body_matrot = tgm.angle_axis_to_rotation_matrix(pose)[:, :3, :3].contiguous()#.view(bs, num_joints*9)
+    num_joints = pose.size(1) // 3
+    pose_body_matrot = tgm.angle_axis_to_rotation_matrix(pose)[:, :3, :3].contiguous()  # .view(bs, num_joints*9)
     return pose_body_matrot
+
 
 def noisy_zrot(rot_in):
     '''
-
     :param rot_in: np.array Nx3 rotations in axis-angle representation
     :return:
-        will add a degree from a full circle to the zrotations
+        randomize the zrotations and reutn in the same shape as input.
+        the firt element t of T will be added a random angle and this addition will happen to all frames
     '''
     is_batched = False
     if rot_in.ndim == 2: is_batched = True
@@ -111,41 +117,111 @@ def noisy_zrot(rot_in):
         pose_euler[2] += rnd_zrot
 
         pose_aa = euler2em(pose_euler)
-        rot_out.append(pose_aa.copy())
+        if np.any(np.isnan(pose_aa)):
+            rot_out.append(pose_cpu)
+        else:
+            rot_out.append(pose_aa.copy())
 
     return np.array(rot_out)
 
-def rotate_points_xyz(mesh_v, Rxyz):
+from typing import Union, List
+
+
+def rotate_points_xyz(mesh_v: np.ndarray, Rxyz: Union[List[int], np.ndarray]):
     '''
 
     :param mesh_v: Nxnum_vx3
-    :param Rxyz: Nx3
+    :param Rxyz: Nx3 or 3
     :return:
     '''
+    if isinstance(Rxyz, list):
+        Rxyz = np.repeat(np.array(Rxyz).reshape(1, 3), repeats=len(mesh_v), axis=0)
+    elif Rxyz.ndim == 2:
+        Rxyz = np.repeat(Rxyz.reshape(1, 3), repeats=len(mesh_v), axis=0)
 
     mesh_v_rotated = []
 
     for fId in range(mesh_v.shape[0]):
         angle = np.radians(Rxyz[fId, 0])
         rx = np.array([
-            [1., 0., 0.           ],
+            [1., 0., 0.],
             [0., np.cos(angle), -np.sin(angle)],
-            [0., np.sin(angle), np.cos(angle) ]
+            [0., np.sin(angle), np.cos(angle)]
         ])
 
         angle = np.radians(Rxyz[fId, 1])
         ry = np.array([
             [np.cos(angle), 0., np.sin(angle)],
-            [0., 1., 0.           ],
+            [0., 1., 0.],
             [-np.sin(angle), 0., np.cos(angle)]
         ])
 
         angle = np.radians(Rxyz[fId, 2])
         rz = np.array([
-            [np.cos(angle), -np.sin(angle), 0. ],
-            [np.sin(angle), np.cos(angle), 0. ],
-            [0., 0., 1. ]
+            [np.cos(angle), -np.sin(angle), 0.],
+            [np.sin(angle), np.cos(angle), 0.],
+            [0., 0., 1.]
         ])
         mesh_v_rotated.append(rz.dot(ry.dot(rx.dot(mesh_v[fId].T))).T)
 
     return np.array(mesh_v_rotated)
+
+
+def tmat(R, t):
+    ''' Creates a batch of transformation matrices
+        Args:
+            - R: NxBx3x3 array of a batch of rotation matrices
+            - t: NxBx3x1 array of a batch of translation vectors
+        Returns:
+            - T: Bx4x4 Transformation matrix
+    '''
+    # No padding left or right, only add an extra row
+
+    bs = R.shape[0]
+
+    return torch.cat([F.pad(R.view(-1, 3, 3), [0, 0, 0, 1]),
+                      F.pad(t.view(-1, 3, 1), [0, 0, 0, 1], value=1)], dim=2).view(bs, -1, 4, 4)
+
+
+def batch_rigid_transform(rot_mats, joints, parents):
+    """
+    Applies a batch of rigid transformations to the joints
+
+    Parameters
+    ----------
+    rot_mats : torch.tensor BxNx3x3
+        Tensor of rotation matrices
+    joints : torch.tensor BxNx3
+        Locations of joints
+    parents : torch.tensor BxN
+        The kinematic tree of each object
+    dtype : torch.dtype, optional:
+        The data type of the created tensors, the default is torch.float32
+
+    Returns
+    -------
+    posed_joints : torch.tensor BxNx3
+        The locations of the joints after applying the pose rotations
+    rel_transforms : torch.tensor BxNx4x4
+        The relative (with respect to the root joint) rigid transformations
+        for all the joints
+    """
+
+    joints = torch.unsqueeze(joints, dim=-1)  # BxNx3X1
+
+    rel_joints = joints.clone()
+    rel_joints[:, 1:] -= joints[:, parents[1:]]
+
+    transform_chain = [tmat(rot_mats[:, 0], rel_joints[:, 0])[:, 0]]
+    for i in range(1, parents.shape[0]):
+        # Subtract the joint location at the rest pose
+        # No need for rotation, since it's identity when at rest
+        curr_res = torch.matmul(transform_chain[parents[i]], tmat(rot_mats[:, i], rel_joints[:, i])[:, 0])
+        transform_chain.append(curr_res)
+
+    transforms = torch.stack(transform_chain, dim=1)
+
+    # The last column of the transformations contains the posed joints
+    posed_joints = transforms[:, :, :3, 3]
+
+    return posed_joints

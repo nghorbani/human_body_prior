@@ -36,7 +36,7 @@ class BodyModel(nn.Module):
                  bm_fname,
                  num_betas=10,
                  num_dmpls=None, dmpl_fname=None,
-                 num_expressions=80,
+                 num_expressions=None,
                  use_posedirs=True,
                  dtype=torch.float32,
                  persistant_buffer=False):
@@ -66,7 +66,7 @@ class BodyModel(nn.Module):
         self.num_expressions = num_expressions
 
         njoints = smpl_dict['posedirs'].shape[2] // 3
-        self.model_type = {69: 'smpl', 153: 'smplh', 162: 'smplx', 45: 'mano', 105: 'animal_horse', 102: 'animal_dog', }[njoints]
+        self.model_type = {69: 'smpl', 153: 'smplh', 162: 'smplx', 45: 'mano', 105: 'animal_horse', 102: 'animal_dog'}[njoints]
 
         assert self.model_type in ['smpl', 'smplh', 'smplx', 'mano', 'mano', 'animal_horse', 'animal_dog'], ValueError(
             'model_type should be in smpl/smplh/smplx/mano.')
@@ -81,6 +81,8 @@ class BodyModel(nn.Module):
         if self.use_dmpl and self.model_type in ['smplx', 'mano', 'animal_horse', 'animal_dog']: raise (
             NotImplementedError('DMPLs only work with SMPL/SMPLH models for now.'))
 
+        self.use_expression = self.model_type == 'smplx' and num_expressions is not None
+
         # Mean template vertices
         self.comp_register('init_v_template', torch.tensor(smpl_dict['v_template'][None], dtype=dtype), persistent=persistant_buffer)
 
@@ -93,7 +95,7 @@ class BodyModel(nn.Module):
         shapedirs = smpl_dict['shapedirs'][:, :, :num_betas]
         self.comp_register('shapedirs', torch.tensor(shapedirs, dtype=dtype), persistent=persistant_buffer)
 
-        if self.model_type == 'smplx':
+        if self.use_expression:
             if smpl_dict['shapedirs'].shape[-1] > 300:
                 begin_shape_id = 300
             else:
@@ -230,7 +232,7 @@ class BodyModel(nn.Module):
             if dmpls is None: dmpls = self.init_dmpls.expand(batch_size, -1)
             shape_components = torch.cat([betas, dmpls], dim=-1)
             shapedirs = torch.cat([self.shapedirs, self.dmpldirs], dim=-1)
-        elif self.model_type == 'smplx':
+        elif self.use_expression:
             if expression is None: expression = self.init_expression.expand(batch_size, -1)
             shape_components = torch.cat([betas, expression], dim=-1)
             shapedirs = torch.cat([self.shapedirs, self.exprdirs], dim=-1)
