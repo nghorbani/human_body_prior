@@ -25,7 +25,7 @@
 from setuptools import setup, find_packages
 
 setup(name='human_body_prior',
-      version='2.1.2.0',
+      version='2.2.0.0',
       packages=find_packages('src'),
       package_dir={'': 'src'},
       include_package_data=True,
