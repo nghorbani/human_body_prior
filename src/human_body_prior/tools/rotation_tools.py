@@ -131,13 +131,12 @@ def rotate_points_xyz(mesh_v: np.ndarray, Rxyz: Union[List[int], np.ndarray]):
     '''
 
     :param mesh_v: Nxnum_vx3
-    :param Rxyz: Nx3 or 3
+    :param Rxyz: Nx3 or 3 in degrees
     :return:
     '''
-    if isinstance(Rxyz, list):
+    if Rxyz is not None:
+        Rxyz = list(Rxyz)
         Rxyz = np.repeat(np.array(Rxyz).reshape(1, 3), repeats=len(mesh_v), axis=0)
-    elif Rxyz.ndim == 2:
-        Rxyz = np.repeat(Rxyz.reshape(1, 3), repeats=len(mesh_v), axis=0)
 
     mesh_v_rotated = []
 
