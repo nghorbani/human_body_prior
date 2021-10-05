@@ -51,9 +51,20 @@ def flatten_list(l):
 
 
 def get_support_data_dir(current_fname=__file__):
+    # print(current_fname)
     support_data_dir = osp.abspath(current_fname)
     support_data_dir_split = support_data_dir.split('/')
-    support_data_dir = '/'.join(support_data_dir_split[:support_data_dir_split.index('src')])
+    # print(support_data_dir_split)
+    try:
+        support_data_dir = '/'.join(support_data_dir_split[:support_data_dir_split.index('src')])
+    except:
+        for i in range(len(support_data_dir_split)-1, 0, -1):
+            support_data_dir = '/'.join(support_data_dir_split[:i])
+            # print(i, support_data_dir)
+            list_dir = os.listdir(support_data_dir)
+            # print('-- ',list_dir)
+            if 'support_data' in list_dir: break
+
     support_data_dir = osp.join(support_data_dir, 'support_data')
     assert osp.exists(support_data_dir)
     return support_data_dir
