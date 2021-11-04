@@ -51,7 +51,8 @@ def load_model(expr_dir, model_code=None,
                remove_words_in_model_weights: str = None,
                load_only_cfg: bool = False,
                disable_grad: bool = True,
-               model_cfg_override: dict = None):
+               model_cfg_override: dict = None,
+               comp_device='gpu'):
     '''
 
     :param expr_dir:
@@ -71,7 +72,12 @@ def load_model(expr_dir, model_code=None,
     if disable_grad:  # i had to do this. torch.no_grad() couldnt achieve what i was looking for
         for param in model_instance.parameters():
             param.requires_grad = False
-    state_dict = torch.load(trained_weights_fname)['state_dict']
+
+    if comp_device=='cpu' or not torch.cuda.is_available():
+        logger.info('No GPU detected. Loading on CPU!')
+        state_dict = torch.load(trained_weights_fname, map_location=torch.device('cpu'))['state_dict']
+    else:
+        state_dict = torch.load(trained_weights_fname)['state_dict']
     if remove_words_in_model_weights is not None:
         words = '{}'.format(remove_words_in_model_weights)
         state_dict = {k.replace(words, '') if k.startswith(words) else k: v for k, v in state_dict.items()}
