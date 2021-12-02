@@ -27,7 +27,7 @@ from omegaconf import OmegaConf
 from loguru import logger
 
 def exprdir2model(expr_dir, model_cfg_override: dict = None):
-    if not os.path.exists(expr_dir): raise ValueError('Could not find the experiment directory: %s' % expr_dir)
+    if not os.path.exists(expr_dir): raise ValueError(f'Could not find the experiment directory: {expr_dir}')
 
     model_snapshots_dir = osp.join(expr_dir, 'snapshots')
     available_ckpts = sorted(glob.glob(osp.join(model_snapshots_dir, '*.ckpt')), key=osp.getmtime)
@@ -53,14 +53,14 @@ def load_model(expr_dir, model_code=None,
                disable_grad: bool = True,
                model_cfg_override: dict = None,
                comp_device='gpu'):
-    '''
+    """
 
     :param expr_dir:
     :param model_code: an imported module
     from supercap.train.supercap_smpl import SuperCap, then pass SuperCap to this function
     :param if True will load the model definition used for training, and not the one in current repository
     :return:
-    '''
+    """
     import torch
 
     model_cfg, trained_weights_fname = exprdir2model(expr_dir, model_cfg_override=model_cfg_override)
