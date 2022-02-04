@@ -37,6 +37,7 @@ class BodyModel(nn.Module):
                  num_dmpls=None, dmpl_fname=None,
                  num_expressions=None,
                  use_posedirs=True,
+                 model_type=None,
                  dtype=torch.float32,
                  persistant_buffer=False):
 
@@ -65,9 +66,13 @@ class BodyModel(nn.Module):
         self.num_expressions = num_expressions
 
         npose_params = smpl_dict['posedirs'].shape[2] // 3
-        self.model_type = {12:'flame', 69: 'smpl', 153: 'smplh', 162: 'smplx', 45: 'mano', 105: 'animal_horse', 102: 'animal_dog'}[npose_params]
+        if model_type:
+            self.model_type = model_type
+        else:
+            self.model_type = {12:'flame', 69: 'smpl', 153: 'smplh', 162: 'smplx', 45: 'mano',
+                           105: 'animal_horse', 102: 'animal_dog'}[npose_params]
 
-        assert self.model_type in ['smpl', 'smplh', 'smplx', 'mano', 'mano', 'animal_horse', 'animal_dog', 'flame'], ValueError(
+        assert self.model_type in ['smpl', 'smplh', 'smplx', 'mano', 'mano', 'animal_horse', 'animal_dog', 'flame', 'animal_rat'], ValueError(
             'model_type should be in smpl/smplh/smplx/mano.')
 
         self.use_dmpl = False
@@ -119,7 +124,7 @@ class BodyModel(nn.Module):
         # Pose blend shape basis: 6890 x 3 x 207, reshaped to 6890*30 x 207
         if use_posedirs:
             posedirs = smpl_dict['posedirs']
-            print(self.model_type, posedirs.shape)
+            # print(self.model_type, posedirs.shape)
             posedirs = posedirs.reshape([posedirs.shape[0] * 3, -1]).T
             self.comp_register('posedirs', torch.tensor(posedirs, dtype=dtype), persistent=persistant_buffer)
         else:
@@ -148,7 +153,7 @@ class BodyModel(nn.Module):
             self.comp_register('init_pose_body', torch.zeros((1,105), dtype=dtype), persistent=persistant_buffer)
         elif self.model_type == 'flame':
             self.comp_register('init_pose_body', torch.zeros((1,3), dtype=dtype), persistent=persistant_buffer)
-        elif self.model_type == 'animal_dog':
+        elif self.model_type in ['animal_dog','animal_rat']:
             self.comp_register('init_pose_body', torch.zeros((1,102), dtype=dtype), persistent=persistant_buffer)
 
         # pose_hand
@@ -199,7 +204,7 @@ class BodyModel(nn.Module):
                 break
 
         # assert not (v_template is not None and betas is not None), ValueError('vtemplate and betas could not be used jointly.')
-        assert self.model_type in ['smpl', 'smplh', 'smplx', 'mano', 'animal_horse', 'animal_dog', 'flame'], ValueError(
+        assert self.model_type in ['smpl', 'smplh', 'smplx', 'mano', 'animal_horse', 'animal_dog', 'flame', 'animal_rat'], ValueError(
             'model_type should be in smpl/smplh/smplx/mano')
         if root_orient is None:  root_orient = self.init_root_orient.expand(batch_size, -1)
         if self.model_type in ['smplh', 'smpl']:
@@ -216,10 +221,11 @@ class BodyModel(nn.Module):
             if pose_eye is None:  pose_eye = self.init_pose_eye.expand(batch_size, -1)
         elif self.model_type in ['mano',]:
             if pose_hand is None:  pose_hand = self.init_pose_hand.expand(batch_size, -1)
-        elif self.model_type in ['animal_horse','animal_dog']:
+        elif self.model_type in ['animal_horse','animal_dog', 'animal_rat']:
             if pose_body is None:  pose_body = self.init_pose_body.expand(batch_size, -1)
 
-        if pose_hand is None and self.model_type not in ['animal_horse', 'animal_dog', 'flame']:  pose_hand = self.init_pose_hand.expand(batch_size, -1)
+        if pose_hand is None and self.model_type not in ['animal_horse', 'animal_dog', 'animal_rat','flame']:
+            pose_hand = self.init_pose_hand.expand(batch_size, -1)
 
         if trans is None: trans = self.init_trans.expand(batch_size, -1)
         if v_template is None: v_template = self.init_v_template.expand(batch_size, -1,-1)
@@ -233,7 +239,7 @@ class BodyModel(nn.Module):
             full_pose = torch.cat([root_orient, pose_body, pose_jaw, pose_eye], dim=-1)  # orient:3, body:63, jaw:3, eyel:3, eyer:3, handl, handr
         elif self.model_type in ['mano', ]:
             full_pose = torch.cat([root_orient, pose_hand], dim=-1)
-        elif self.model_type in ['animal_horse', 'animal_dog']:
+        elif self.model_type in ['animal_horse', 'animal_dog', 'animal_rat']:
             full_pose = torch.cat([root_orient, pose_body], dim=-1)
 
         if self.use_dmpl:
