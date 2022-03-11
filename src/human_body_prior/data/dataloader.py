@@ -31,7 +31,7 @@ class VPoserDS(Dataset):
     """AMASS: a pytorch loader for unified human motion capture dataset. http://amass.is.tue.mpg.de/"""
 
     def __init__(self, dataset_dir, data_fields=[]):
-        assert os.path.exists(dataset_dir)
+        assert os.path.exists(dataset_dir),dataset_dir
         self.ds = {}
         for data_fname in glob.glob(os.path.join(dataset_dir, '*.pt')):
             k = os.path.basename(data_fname).replace('.pt','')
