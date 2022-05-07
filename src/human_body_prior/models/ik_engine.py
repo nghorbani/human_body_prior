@@ -24,8 +24,9 @@
 from typing import List, Dict
 
 from psbody.mesh import Mesh
-from body_visualizer.tools.psbody_mesh_tools import rotateXYZ, points_to_cubes, points_to_spheres
-
+from body_visualizer.tools.mesh_tools import rotateXYZ
+from body_visualizer.mesh.psbody_mesh_cube import points_to_cubes
+from body_visualizer.mesh.psbody_mesh_sphere import points_to_spheres
 
 from torch import nn
 import torch
