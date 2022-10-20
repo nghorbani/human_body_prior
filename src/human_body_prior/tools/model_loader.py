@@ -91,8 +91,8 @@ def load_model(expr_dir, model_code=None,
     # assert len(wts_in_model_not_in_file) == 0, ValueError('Some model weights are not present in the pretrained file. {}'.format(wts_in_model_not_in_file))
 
     state_dict = {k: v for k, v in state_dict.items() if k in instance_model_keys}
-    model_instance.load_state_dict(state_dict,
-                                   strict=False)  # Todo fix the issues so that we can set the strict to true. The body model uses unnecessary registered buffers
+    model_instance.load_state_dict(state_dict,strict=False)
+    # Todo fix the issues so that we can set the strict to true. The body model uses unnecessary registered buffers
     model_instance.eval()
     logger.info(f'Loaded model in eval mode with trained weights: {trained_weights_fname}')
     return model_instance,  model_cfg

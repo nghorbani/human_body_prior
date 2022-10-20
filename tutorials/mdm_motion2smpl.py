@@ -22,7 +22,8 @@ from human_body_prior.body_model.body_model import BodyModel
 from human_body_prior.models.ik_engine import IK_Engine
 from human_body_prior.tools.omni_tools import copy2cpu as c2c
 from human_body_prior.tools.omni_tools import create_list_chunks
-
+import argparse
+from tqdm import tqdm
 
 class SourceKeyPoints(nn.Module):
     def __init__(self,
@@ -139,8 +140,10 @@ def convert_mdm_mp4_to_amass_npz(skeleton_movie_fname, surface_model_type = 'smp
 
     batch_size = len(motion)
     all_results = {}
-    for cur_frame_ids in create_list_chunks(np.arange(len(motion)), batch_size, overlap_size=0,
-                                            cut_smaller_batches=False):
+    batched_frames = create_list_chunks(np.arange(len(motion)), batch_size, overlap_size=0, cut_smaller_batches=False)
+    if verbosity<2:
+        batched_frames = tqdm(batched_frames, desc='VPoser Advanced IK')
+    for cur_frame_ids in batched_frames:
 
         target_pts = torch.from_numpy(motion[cur_frame_ids, :n_joints]).to(comp_device)
         source_pts = SourceKeyPoints(bm=bm_fname, n_joints=n_joints, kpts_colors=kpts_colors, num_betas=num_betas).to(
@@ -170,13 +173,18 @@ def convert_mdm_mp4_to_amass_npz(skeleton_movie_fname, surface_model_type = 'smp
 
     np.savez(out_fname, **d)
     logger.success(f'created: {out_fname}')
+    logger.info(f'You can visualize these results as any amass npz file or in Blender via blender_smplx_addon.')
 
 
 if __name__ == '__main__':
-    '''
-    install human_body_prior
-    
-    '''
-    skeleton_movie_fname = '/home/nima/opt/code-repos/motion-diffusion-model/save/humanml_trans_enc_512/samples_humanml_trans_enc_512_000200000_seed10_the_person_walked_forward_and_is_picking_up_his_toolbox/sample00_rep01.mp4'
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", type=str, required=True, help='skeleton movie filename that is to be converted into SMPL')
+    parser.add_argument("--model_type", type=str, default='smplx', help='model_type; e.g. smplx')
+    parser.add_argument("--gender", type=str, default='neutral', help='gender; e.g. neutral')
+    parser.add_argument("--verbosity", type=int, default=0, help='gender; e.g. neutral')
+    params = parser.parse_args()
 
-    convert_mdm_mp4_to_amass_npz()
+    convert_mdm_mp4_to_amass_npz(skeleton_movie_fname=params.input,
+                                 surface_model_type=params.model_type,
+                                 gender=params.gender,
+                                 verbosity=params.verbosity)
