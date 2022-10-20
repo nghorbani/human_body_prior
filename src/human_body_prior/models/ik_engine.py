@@ -66,8 +66,8 @@ def visualize(points, bm_f, mvs, kpts_colors, verbosity=2, logger=None):
             for dispId, fId in enumerate(frame_ids): # check for the number of frames in mvs and show a randomly picked number of frames in body if there is more to show than row*cols available
                 new_body_v = rotateXYZ(body_v[fId], [-90,0,0])
 
-                orig_mrk_mesh = points_to_spheres(rotateXYZ(c2c(points[fId]), [-90,0,0]), radius=0.01, color=kpts_colors)
-                virtual_markers_mesh = points_to_cubes(rotateXYZ(virtual_markers[fId], [-90,0,0]), radius=0.01, color=kpts_colors)
+                orig_mrk_mesh = points_to_spheres(rotateXYZ(c2c(points[fId]), [-90,0,0]), radius=0.01, point_color=kpts_colors)
+                virtual_markers_mesh = points_to_cubes(rotateXYZ(virtual_markers[fId], [-90,0,0]), radius=0.01, point_color=kpts_colors)
                 new_body_mesh = Mesh(new_body_v, bm_f, vc=colors['grey'])
 
                 # linev = rotateXYZ(np.hstack((c2c(points[fId]), virtual_markers[fId])).reshape((-1, 3)), [-90,0,0])
@@ -165,6 +165,7 @@ class IK_Engine(nn.Module):
                  stepwise_weights: List[Dict]=[{'data': 10., 'poZ_body': .01, 'betas': .5}],
                  display_rc: tuple = (2,1),
                  verbosity: int = 1,
+                 num_betas: int = 16,
                  logger=None,
                  ):
         '''
@@ -186,7 +187,7 @@ class IK_Engine(nn.Module):
         assert np.all(['data' in l for l in stepwise_weights]), ValueError('The term data should be available in every weight of anealed optimization step: {}'.format(stepwise_weights))
 
         self.data_loss = torch.nn.SmoothL1Loss(reduction='mean') if data_loss is None else data_loss
-
+        self.num_betas = num_betas
         self.stepwise_weights = stepwise_weights
         self.verbosity = verbosity
         self.optimizer_args = optimizer_args
@@ -213,9 +214,7 @@ class IK_Engine(nn.Module):
         Try to reconstruct the bps signature by optimizing the body_poZ
         '''
         # if self.rt_ps.verbosity > 0: self.logger('Processing {} frames'.format(points.shape[0]))
-
         bs = target_kpts.shape[0]
-
 
         on_step = visualize(target_kpts,
                             kpts_colors=source_kpts.kpts_colors,
@@ -231,7 +230,7 @@ class IK_Engine(nn.Module):
         if 'trans' not in initial_body_params:
             initial_body_params['trans'] = torch.zeros([bs, 3], device=comp_device, dtype=torch.float, requires_grad=False)
         if 'betas' not in initial_body_params:
-            initial_body_params['betas'] = torch.zeros([bs, 10], device=comp_device, dtype=torch.float, requires_grad=False)
+            initial_body_params['betas'] = torch.zeros([bs, self.num_betas], device=comp_device, dtype=torch.float, requires_grad=False)
         if 'root_orient' not in initial_body_params:
             initial_body_params['root_orient'] = torch.zeros([bs, 3], device=comp_device, dtype=torch.float, requires_grad=False)
 

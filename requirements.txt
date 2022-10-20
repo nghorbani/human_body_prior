@@ -1,4 +1,4 @@
-git+https://github.com/nghorbani/body_visualizer
+#git+https://github.com/nghorbani/body_visualizer
 git+https://github.com/MPI-IS/configer.git
 git+https://github.com/MPI-IS/mesh.git
 
@@ -10,4 +10,6 @@ PyYAML
 torch
 transforms3d==0.3.1
 pytorch3d
+omegaconf
+loguru
 
