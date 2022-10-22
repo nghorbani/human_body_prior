@@ -23,11 +23,21 @@
 
 from typing import List, Dict
 
-from psbody.mesh import Mesh
+can_display = True
 
-from body_visualizer.mesh.psbody_mesh_cube import points_to_cubes
-from body_visualizer.mesh.psbody_mesh_sphere import points_to_spheres
-from body_visualizer.tools.mesh_tools import rotateXYZ
+try:
+    from psbody.mesh import Mesh
+
+    from body_visualizer.mesh.psbody_mesh_cube import points_to_cubes
+    from body_visualizer.mesh.psbody_mesh_sphere import points_to_spheres
+    from body_visualizer.tools.mesh_tools import rotateXYZ
+    from body_visualizer.tools.vis_tools import colors
+    from psbody.mesh import MeshViewers
+
+except Exception as e:
+    print(e)
+    print('psbody.mesh based visualization could not be started. skipping ...')
+    can_display = False
 
 from torch import nn
 import torch
@@ -36,9 +46,7 @@ from human_body_prior.tools.model_loader import load_model
 
 import numpy as np
 
-from body_visualizer.tools.vis_tools import colors
 from human_body_prior.tools.omni_tools import copy2cpu as c2c
-from psbody.mesh import MeshViewers
 
 from human_body_prior.tools.omni_tools import log2file
 
@@ -56,18 +64,23 @@ def visualize(points, bm_f, mvs, kpts_colors, verbosity=2, logger=None):
         opt_objs_cpu = {k: c2c(v) for k, v in opt_objs.items()}
 
         total_loss = np.sum([np.sum(v) for k, v in opt_objs_cpu.items()])
-        message = 'it {} -- [total loss = {:.2e}] - {}'.format(opt_it, total_loss, ' | '.join(['%s = %2.2e' % (k, np.sum(v)) for k, v in opt_objs_cpu.items()]))
+        message = 'it {} -- [total loss = {:.2e}] - {}'.format(opt_it, total_loss, ' | '.join(
+            ['%s = %2.2e' % (k, np.sum(v)) for k, v in opt_objs_cpu.items()]))
         logger(message)
-        if verbosity>1:
+        if verbosity > 1 and can_display:
             bs = body_v.shape[0]
             np.random.seed(100)
-            frame_ids = list(range(bs)) if bs <= len(mvs) else np.random.choice(bs , size=len(mvs), replace=False).tolist()
+            frame_ids = list(range(bs)) if bs <= len(mvs) else np.random.choice(bs, size=len(mvs),
+                                                                                replace=False).tolist()
             if bs > len(mvs): message += ' -- [frame_ids: {}]'.format(frame_ids)
-            for dispId, fId in enumerate(frame_ids): # check for the number of frames in mvs and show a randomly picked number of frames in body if there is more to show than row*cols available
-                new_body_v = rotateXYZ(body_v[fId], [-90,0,0])
+            for dispId, fId in enumerate(
+                    frame_ids):  # check for the number of frames in mvs and show a randomly picked number of frames in body if there is more to show than row*cols available
+                new_body_v = rotateXYZ(body_v[fId], [-90, 0, 0])
 
-                orig_mrk_mesh = points_to_spheres(rotateXYZ(c2c(points[fId]), [-90,0,0]), radius=0.01, point_color=kpts_colors)
-                virtual_markers_mesh = points_to_cubes(rotateXYZ(virtual_markers[fId], [-90,0,0]), radius=0.01, point_color=kpts_colors)
+                orig_mrk_mesh = points_to_spheres(rotateXYZ(c2c(points[fId]), [-90, 0, 0]), radius=0.01,
+                                                  point_color=kpts_colors)
+                virtual_markers_mesh = points_to_cubes(rotateXYZ(virtual_markers[fId], [-90, 0, 0]), radius=0.01,
+                                                       point_color=kpts_colors)
                 new_body_mesh = Mesh(new_body_v, bm_f, vc=colors['grey'])
 
                 # linev = rotateXYZ(np.hstack((c2c(points[fId]), virtual_markers[fId])).reshape((-1, 3)), [-90,0,0])
@@ -82,6 +95,7 @@ def visualize(points, bm_f, mvs, kpts_colors, verbosity=2, logger=None):
 
             mvs[0].set_titlebar(message)
             # if out_dir is not None: mv.save_snapshot(os.path.join(out_dir, '%05d_it_%.5d.png' %(frame_id, opt_it)))
+
     return view
 
 
@@ -90,7 +104,6 @@ class AdamInClosure():
         self.optimizer = torch.optim.Adam(var_list, lr)
         self.max_iter = max_iter
         self.tolerance_change = tolerance_change
-
 
     def step(self, closure):
         prev_loss = None
@@ -103,21 +116,21 @@ class AdamInClosure():
             if torch.isnan(loss):
                 # breakpoint()
                 break
-            if abs(loss - prev_loss) <  self.tolerance_change:
+            if abs(loss - prev_loss) < self.tolerance_change:
                 print('abs(loss - prev_loss) <  self.tolerance_change')
                 break
 
     def zero_grad(self):
         self.optimizer.zero_grad()
 
-def ik_fit(optimizer, source_kpts_model, static_vars, vp_model, extra_params={}, on_step=None, gstep=0):
 
+def ik_fit(optimizer, source_kpts_model, static_vars, vp_model, extra_params={}, on_step=None, gstep=0):
     data_loss = extra_params.get('data_loss', torch.nn.SmoothL1Loss(reduction='mean'))
+
     # data_loss =
     # data_loss = torch.nn.L1Loss(reduction='mean')#change with SmoothL1
 
     def fit(weights, free_vars):
-
         fit.gstep += 1
         optimizer.zero_grad()
 
@@ -130,11 +143,10 @@ def ik_fit(optimizer, source_kpts_model, static_vars, vp_model, extra_params={},
 
         opt_objs['data'] = data_loss(res['source_kpts'], static_vars['target_kpts'])
 
-        opt_objs['betas'] = torch.pow(free_vars['betas'][nonan_mask],2).sum()
-        opt_objs['poZ_body'] = torch.pow(free_vars['poZ_body'][nonan_mask],2).sum()
+        opt_objs['betas'] = torch.pow(free_vars['betas'][nonan_mask], 2).sum()
+        opt_objs['poZ_body'] = torch.pow(free_vars['poZ_body'][nonan_mask], 2).sum()
 
-
-        opt_objs = {k: opt_objs[k]*v for k, v in weights.items() if k in opt_objs.keys()}
+        opt_objs = {k: opt_objs[k] * v for k, v in weights.items() if k in opt_objs.keys()}
         loss_total = torch.sum(torch.stack(list(opt_objs.values())))
         # breakpoint()
 
@@ -143,7 +155,7 @@ def ik_fit(optimizer, source_kpts_model, static_vars, vp_model, extra_params={},
         if on_step is not None:
             on_step(opt_objs, c2c(res['body'].v), c2c(res['source_kpts']), fit.gstep)
 
-        fit.free_vars = {k:v for k,v in free_vars.items()}# if k in IK_Engine.fields_to_optimize}
+        fit.free_vars = {k: v for k, v in free_vars.items()}  # if k in IK_Engine.fields_to_optimize}
         # fit.nonan_mask = nonan_mask
         fit.final_loss = loss_total
 
@@ -155,15 +167,15 @@ def ik_fit(optimizer, source_kpts_model, static_vars, vp_model, extra_params={},
     # fit.nonan_mask = None
     return fit
 
-class IK_Engine(nn.Module):
 
+class IK_Engine(nn.Module):
 
     def __init__(self,
                  vposer_expr_dir: str,
                  data_loss,
-                 optimizer_args: dict={'type':'ADAM'},
-                 stepwise_weights: List[Dict]=[{'data': 10., 'poZ_body': .01, 'betas': .5}],
-                 display_rc: tuple = (2,1),
+                 optimizer_args: dict = {'type': 'ADAM'},
+                 stepwise_weights: List[Dict] = [{'data': 10., 'poZ_body': .01, 'betas': .5}],
+                 display_rc: tuple = (2, 1),
                  verbosity: int = 1,
                  num_betas: int = 16,
                  logger=None,
@@ -180,11 +192,12 @@ class IK_Engine(nn.Module):
         :param logger: an instance of human_body_prior.tools.omni_tools.log2file
         '''
 
-
         super(IK_Engine, self).__init__()
 
         assert isinstance(stepwise_weights, list), ValueError('stepwise_weights should be a list of dictionaries.')
-        assert np.all(['data' in l for l in stepwise_weights]), ValueError('The term data should be available in every weight of anealed optimization step: {}'.format(stepwise_weights))
+        assert np.all(['data' in l for l in stepwise_weights]), ValueError(
+            'The term data should be available in every weight of anealed optimization step: {}'.format(
+                stepwise_weights))
 
         self.data_loss = torch.nn.SmoothL1Loss(reduction='mean') if data_loss is None else data_loss
         self.num_betas = num_betas
@@ -192,21 +205,19 @@ class IK_Engine(nn.Module):
         self.verbosity = verbosity
         self.optimizer_args = optimizer_args
 
-        self.logger  = log2file() if logger is None else logger
+        self.logger = log2file() if logger is None else logger
 
-
-        if verbosity>1:
+        if verbosity > 1 and can_display:
             mvs = MeshViewers(display_rc, keepalive=True)
             self.mvs = flatten_list(mvs)
             self.mvs[0].set_background_color(colors['white'])
         else:
-            self.mvs=None
+            self.mvs = None
 
         self.vp_model, _ = load_model(vposer_expr_dir,
                                       model_code=VPoser,
                                       remove_words_in_model_weights='vp_model.',
                                       disable_grad=True)
-
 
     def forward(self, source_kpts, target_kpts, initial_body_params={}):
         '''
@@ -226,23 +237,28 @@ class IK_Engine(nn.Module):
         comp_device = target_kpts.device
         # comp_device = self.vp_model.named_parameters().__next__()[1].device
         if 'pose_body' not in initial_body_params:
-            initial_body_params['pose_body'] = torch.zeros([bs, 63], device=comp_device, dtype=torch.float, requires_grad=False)
+            initial_body_params['pose_body'] = torch.zeros([bs, 63], device=comp_device, dtype=torch.float,
+                                                           requires_grad=False)
         if 'trans' not in initial_body_params:
-            initial_body_params['trans'] = torch.zeros([bs, 3], device=comp_device, dtype=torch.float, requires_grad=False)
+            initial_body_params['trans'] = torch.zeros([bs, 3], device=comp_device, dtype=torch.float,
+                                                       requires_grad=False)
         if 'betas' not in initial_body_params:
-            initial_body_params['betas'] = torch.zeros([bs, self.num_betas], device=comp_device, dtype=torch.float, requires_grad=False)
+            initial_body_params['betas'] = torch.zeros([bs, self.num_betas], device=comp_device, dtype=torch.float,
+                                                       requires_grad=False)
         if 'root_orient' not in initial_body_params:
-            initial_body_params['root_orient'] = torch.zeros([bs, 3], device=comp_device, dtype=torch.float, requires_grad=False)
+            initial_body_params['root_orient'] = torch.zeros([bs, 3], device=comp_device, dtype=torch.float,
+                                                             requires_grad=False)
 
         initial_body_params['poZ_body'] = self.vp_model.encode(initial_body_params['pose_body']).mean
 
-        free_vars = {k: torch.nn.Parameter(v.detach(), requires_grad=True) for k,v in initial_body_params.items() if k in ['betas', 'trans', 'poZ_body', 'root_orient']}
+        free_vars = {k: torch.nn.Parameter(v.detach(), requires_grad=True) for k, v in initial_body_params.items() if
+                     k in ['betas', 'trans', 'poZ_body', 'root_orient']}
         static_vars = {
-                    'target_kpts': target_kpts,
-                       # 'trans': initial_body_params['trans'].detach(),
-                       # 'betas': initial_body_params['betas'].detach(),
-                       # 'poZ_body': initial_body_params['poZ_body'].detach()
-                       }
+            'target_kpts': target_kpts,
+            # 'trans': initial_body_params['trans'].detach(),
+            # 'betas': initial_body_params['betas'].detach(),
+            # 'poZ_body': initial_body_params['poZ_body'].detach()
+        }
 
         if self.optimizer_args['type'].upper() == 'LBFGS':
             optimizer = torch.optim.LBFGS(list(free_vars.values()),
@@ -285,4 +301,4 @@ class IK_Engine(nn.Module):
         #     breakpoint()
         #     return None
 
-        return closure.free_vars#, closure.nonan_mask
+        return closure.free_vars  # , closure.nonan_mask
