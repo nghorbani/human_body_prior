@@ -221,14 +221,14 @@ if __name__ == '__main__':
     import argparse
     from glob import glob
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", type=str, help='skeleton movie filename that is to be converted into SMPL')
-    parser.add_argument("--pattern", type=str, help='filename pattern for skeleton movies be converted into SMPL')
+    parser.add_argument("--input", type=str, help='skeleton movie.mp4 filename that is to be converted into SMPL')
+    parser.add_argument("--pattern", type=str, help='filename pattern for skeleton */*/movies.mp4 to be converted into SMPL')
     parser.add_argument("--batch_size", type=int, default=128, help='batch size for inverse kinematics')
-    parser.add_argument("--model_type", type=str, default='smplx', help='model_type; e.g. smplx')
+    parser.add_argument("--model_type", type=str, default='smplx', help='model_type; e.g. smplx/smpl')
     parser.add_argument("--device", type=str, default='cuda:0', help='computation device')
     parser.add_argument("--gender", type=str, default='neutral', help='gender; e.g. neutral')
     parser.add_argument("--save_render", type=bool, default=True, help='render IK results')
-    parser.add_argument("--verbosity", type=int, default=0, help='gender; e.g. neutral')
+    parser.add_argument("--verbosity", type=int, default=0, help='0: silent, 1: text, 2: display')
     params = parser.parse_args()
     # params = {
     #     'input':'/home/nima/opt/code-repos/motion-diffusion-model/save/humanml_trans_enc_512/samples_humanml_trans_enc_512_000200000_seed10/sample00_rep00.mp4',
