@@ -28,9 +28,38 @@ import torch.nn as nn
 
 # from smplx.lbs import lbs
 from human_body_prior.body_model.lbs import lbs
-# import trimesh # dont use this package for loading meshes since it messes up the order of vertices
-from psbody.mesh import Mesh
 from human_body_prior.body_model.lbs import batch_rodrigues
+
+try:
+    from psbody.mesh import Mesh as _PsbodyMesh
+except ImportError:
+    _PsbodyMesh = None
+
+try:
+    import trimesh
+except ImportError:
+    trimesh = None
+
+
+def _load_rigid_mesh(path):
+    if _PsbodyMesh is not None:
+        mesh = _PsbodyMesh(filename=path)
+        return mesh.v, mesh.f.astype(np.int32)
+    if trimesh is not None:
+        tri_mesh = trimesh.load(path, process=False)
+        if isinstance(tri_mesh, list):
+            tri_mesh = trimesh.util.concatenate(tri_mesh)
+        if hasattr(tri_mesh, 'geometry'):
+            tri_mesh = trimesh.util.concatenate(tuple(tri_mesh.geometry.values()))
+        if not isinstance(tri_mesh, trimesh.Trimesh):
+            raise TypeError(f'Unsupported mesh container returned by trimesh for {path}')
+        faces = np.asarray(tri_mesh.faces, dtype=np.int32)
+        verts = np.asarray(tri_mesh.vertices)
+        return verts, faces
+    raise ImportError(
+        "RigidObjectModel requires either `psbody.mesh` (install via `human_body_prior[psbody]`, Linux only) "
+        "or the `trimesh` fallback provided by the `vis` extra."
+    )
 
 class RigidObjectModel(nn.Module):
 
@@ -43,10 +72,10 @@ class RigidObjectModel(nn.Module):
         root_orient = torch.tensor(np.zeros((batch_size, 3)), dtype=dtype, requires_grad=True)
         self.register_parameter('root_orient', nn.Parameter(root_orient, requires_grad=True))
 
-        mesh = Mesh(filename=plpath)
+        verts, faces = _load_rigid_mesh(plpath)
 
-        self.rigid_v = torch.from_numpy(np.repeat(mesh.v[np.newaxis], batch_size, axis=0)).type(dtype)
-        self.f = torch.from_numpy(mesh.f.astype(np.int32))
+        self.rigid_v = torch.from_numpy(np.repeat(verts[np.newaxis], batch_size, axis=0)).type(dtype)
+        self.f = torch.from_numpy(faces)
 
     def forward(self, root_orient, trans):
         if root_orient is None: root_orient = self.root_orient

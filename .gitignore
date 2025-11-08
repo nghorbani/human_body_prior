@@ -4,9 +4,9 @@
 human_body_prior.egg-info/
 
 
-support_data/dowloads/models/smplh/*
+support_data/dowloads/models/smplh/*.npz
 
-support_data/dowloads/models/smplx/*
+support_data/dowloads/models/smplx/*.npz
 
 *.ipynb_checkpoints/
 
@@ -14,5 +14,8 @@ support_data/dowloads/models/smplx/*
 
 *.pyc
 
-support_data/dowloads/vposer_v2_05/*
 support_data/dowloads/vposer_v1_0/*
+.vscode/
+.history/
+support_data/dowloads/V02_05/snapshots/*.ckpt
+dev_docs/

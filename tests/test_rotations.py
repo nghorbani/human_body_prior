@@ -21,41 +21,48 @@
 #
 # 2018.12.13
 
-import unittest
-
-from human_body_prior.tools.omni_tools import copy2cpu as c2c
-from human_body_prior.train.vposer_smpl import VPoser
-
 import numpy as np
-import cv2
 import torch
+from transforms3d.axangles import axangle2mat, mat2axangle
+
+from human_body_prior.tools.rotation_tools import aa2matrot, matrot2aa
 
 
-class TestRotationConversions(unittest.TestCase):
-
-    def test_aa2matrot(self):
-        aa = np.random.randn(10, 3)
-        cv2_matrot = []
-        for id in range(aa.shape[0]):
-            cv2_matrot.append(cv2.Rodrigues(aa[id:id+1])[0])
-        cv2_matrot = np.array(cv2_matrot).reshape(-1,9)
-
-        vposer_matrot = c2c(VPoser.aa2matrot(torch.tensor(aa))).reshape(-1,9)
-        self.assertAlmostEqual(np.square((vposer_matrot - cv2_matrot)).sum(), 0.0)
-
-    def test_matrot2aa(self):
-        np.random.seed(100)
-        aa = np.random.randn(10, 3)
-        matrot = c2c(VPoser.aa2matrot(torch.tensor(aa))).reshape(-1,9)
-
-        cv2_aa = []
-        for id in range(matrot.shape[0]):
-            cv2_aa.append(cv2.Rodrigues(matrot[id].reshape(3,3))[0])
-        cv2_aa = np.array(cv2_aa).reshape(-1,3)
-
-        vposer_aa = c2c(VPoser.matrot2aa(torch.tensor(matrot))).reshape(-1,3)
-        self.assertAlmostEqual(np.square((vposer_aa - cv2_aa)).sum(), 0.0)
+def _axis_angle_to_matrix(vec: np.ndarray) -> np.ndarray:
+    angle = np.linalg.norm(vec)
+    if angle == 0.0:
+        return np.eye(3)
+    axis = vec / angle
+    return axangle2mat(axis, angle)
 
 
-if __name__ == '__main__':
-    unittest.main()
+def _matrix_to_axis_angle(mat: np.ndarray) -> np.ndarray:
+    axis, angle = mat2axangle(mat)
+    return np.asarray(axis) * angle
+
+
+def test_aa2matrot_matches_transforms3d():
+    aa = torch.randn(10, 3)
+    ours = aa2matrot(aa).detach().cpu().numpy()
+    expected = np.stack([
+        _axis_angle_to_matrix(vec) for vec in aa.detach().cpu().numpy()
+    ])
+    np.testing.assert_allclose(ours, expected, atol=1e-5)
+
+
+def test_matrot2aa_round_trip():
+    aa = torch.randn(10, 3)
+    mats = aa2matrot(aa)
+    recovered = matrot2aa(mats).detach().cpu().numpy()
+    np.testing.assert_allclose(recovered, aa.detach().cpu().numpy(), atol=1e-5)
+
+
+def test_matrot2aa_matches_transforms3d():
+    mats = np.stack([
+        _axis_angle_to_matrix(vec) for vec in np.random.randn(10, 3)
+    ])
+    ours = matrot2aa(torch.tensor(mats, dtype=torch.float32)).detach().cpu().numpy()
+    expected = np.stack([
+        _matrix_to_axis_angle(mat) for mat in mats
+    ])
+    np.testing.assert_allclose(ours, expected, atol=1e-5)

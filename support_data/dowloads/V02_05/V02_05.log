@@ -1,0 +1,80 @@
+[V02_05] -- VPoser dataset already exists at /ps/scratch/human_body_prior/VPoser/data/smpl/V02_03
+[V02_05] -- Total Trainable Parameters Count in vp_model is 0.94 M.
+[V02_05] -- Epoch 0: val_loss:0.51
+[V02_05] -- lr is [0.001]
+[V02_05] -- Created a git archive backup at /ps/scratch/human_body_prior/VPoser/training_experiments/V02_05/code/vposer_2020_10_23_17_10_39.tar.gz
+[V02_05] -- Epoch 0: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 1: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 2: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 3: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 4: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 5: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 6: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 7: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 8: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 9: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 10: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 11: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 12: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 13: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 14: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 15: val_loss:0.04
+[V02_05] -- lr is [0.0001]
+[V02_05] -- Epoch 16: val_loss:0.04
+[V02_05] -- lr is [0.0001]
+[V02_05] -- Epoch 17: val_loss:0.04
+[V02_05] -- lr is [0.0001]
+[V02_05] -- Epoch 18: val_loss:0.04
+[V02_05] -- lr is [0.0001]
+[V02_05] -- VPoser dataset already exists at /ps/scratch/human_body_prior/VPoser/data/smpl/V02_03
+[V02_05] -- Total Trainable Parameters Count in vp_model is 0.94 M.
+[V02_05] -- Epoch 0: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Created a git archive backup at /ps/scratch/human_body_prior/VPoser/training_experiments/V02_05/code/vposer_2020_10_23_18_48_23.tar.gz
+[V02_05] -- Epoch 9: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 10: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 11: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 12: val_loss:0.03
+[V02_05] -- lr is [0.001]
+[V02_05] -- Epoch 13: val_loss:0.03
+[V02_05] -- lr is [0.0001]
+[V02_05] -- Epoch 14: val_loss:0.03
+[V02_05] -- lr is [0.0001]
+[V02_05] -- Epoch 15: val_loss:0.04
+[V02_05] -- lr is [0.0001]
+[V02_05] -- Epoch 16: val_loss:0.04
+[V02_05] -- lr is [0.0001]
+[V02_05] -- Epoch 17: val_loss:0.04
+[V02_05] -- lr is [0.0001]
+[V02_05] -- Epoch 18: val_loss:0.04
+[V02_05] -- lr is [0.0001]
+[V02_05] -- Epoch 19: val_loss:0.04
+[V02_05] -- lr is [0.0001]
+[V02_05] -- Epoch 20: val_loss:0.04
+[V02_05] -- lr is [1e-05]
+[V02_05] -- Epoch 21: val_loss:0.04
+[V02_05] -- lr is [1e-05]
+[V02_05] -- Epoch 22: val_loss:0.04
+[V02_05] -- lr is [1e-05]
+[V02_05] -- Epoch 23: val_loss:0.04
+[V02_05] -- lr is [1e-05]
+[V02_05] -- Epoch 23 - Finished training at 2020_10_23_19_40_46 after 0:52:23
+[V02_05] -- best_model_fname: /ps/scratch/human_body_prior/VPoser/training_experiments/V02_05/snapshots/V02_05_epoch=13_val_loss=0.03.ckpt

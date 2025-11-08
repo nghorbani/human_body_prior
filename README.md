@@ -27,21 +27,49 @@ VPoser has the following features:
   * [Contact](#contact)
   * [FAQ](https://github.com/nghorbani/human_body_prior/wiki/FAQ)
 
-## Installation
-**Requirements**
-- Python 3.7
-- [PyTorch 1.7.1](https://pytorch.org/get-started)
+## Installation (uv)
+Requirements
+- Python 3.11–3.12 (recommended). Avoid 3.13/3.14 for now due to limited third‑party wheels.
+- uv (https://docs.astral.sh/uv/) installed
 
-[comment]: <> (- [Torchgeometry 0.1.2]&#40;https://pypi.org/project/torchgeometry/0.1.2/&#41;)
-
-[comment]: <> (- [Body Visualizer]&#40;https://github.com/nghorbani/body_visualizer&#41; for visualizations)
-  
-
-Clone this repo and run the following from the root folder:
+Core (recommended)
 ```bash
-pip install -r requirements.txt
-python setup.py develop
+uv sync
 ```
+
+Development tools (tests, linters)
+```bash
+uv sync --extra dev
+```
+
+Optional features
+- Lightning: `uv sync --extra pl`
+- Visualization: `uv sync --extra vis`
+
+Quick check
+```bash
+uv run python -c "import human_body_prior; print('ok')"
+```
+
+Run tests (pytest)
+```bash
+uv sync --extra dev
+uv run pytest -q
+```
+
+Notes
+- PyTorch CUDA builds: install the appropriate wheel per your CUDA setup (default dependency is CPU). See https://pytorch.org/get-started for selection guidance.
+- If your global Python is 3.13/3.14, create the env with a supported version, e.g.:
+  - `uv venv --python 3.12 && uv sync`
+  - or `uv python pin 3.12` before `uv sync`
+
+## Model Weights
+- VPoser weights: Download the pretrained VPoser checkpoint(s) from the SMPL-X project page. The tutorials include guidance on expected folder layout and how to point the code to the checkpoint.
+- SMPL-X body models: Download SMPL-X model files (e.g., `model.npz`) from the SMPL-X website (registration required). You will need to provide the path via `bm_fname` when constructing `BodyModel`.
+
+Where to find details
+- See tutorials/vposer.ipynb for concrete instructions, example paths, and usage. It shows how to load VPoser weights and SMPL-X models for sampling and IK examples.
+
 
 ## Tutorials
 ![alt text](support_data/latent_interpolation_1.gif "Interpolation of novel poses on the smoother VPoser latent space.")
