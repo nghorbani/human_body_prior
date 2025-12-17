@@ -1,2 +1,0 @@
-include support_data/*.*
-include src/human_body_prior/body_model/parts_segm/*/*.*

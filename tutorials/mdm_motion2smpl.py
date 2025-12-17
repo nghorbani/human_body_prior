@@ -110,14 +110,14 @@ def convert_mdm_mp4_to_amass_npz(skeleton_movie_fname, out_fname=None, save_rend
     :return:
     """
 
-    support_base_dir = get_support_data_dir()
-    support_dir = osp.join(support_base_dir, 'dowloads')#'../../../support_data/dowloads'
+    support_base_dir = Path(get_support_data_dir())
+    support_dir = support_base_dir / 'dowloads'#'../../../support_data/dowloads'
     logger.info(f'found support_dir: {support_dir}')
     # 'TRAINED_MODEL_DIRECTORY'  in this directory the trained model along with the model code exist
-    vposer_expr_dir = osp.join(support_dir,'vposer_v2_05')
+    vposer_expr_dir = str((support_dir / 'vposer_v2_05').resolve())
 
     # 'PATH_TO_SMPLX_model.npz'  obtain from https://smpl-x.is.tue.mpg.de/downloads
-    bm_fname = osp.join(support_dir, f'models/{surface_model_type}/{gender}/model.npz')
+    bm_fname = str((support_dir / 'models' / surface_model_type / gender / 'model.npz').resolve())
 
     if isinstance(skeleton_movie_fname, np.ndarray):
         assert out_fname is not None, 'when passing motion file out_fname should be provided'

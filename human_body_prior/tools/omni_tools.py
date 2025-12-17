@@ -24,6 +24,7 @@ import os
 import os.path as osp
 import random
 import sys
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -50,24 +51,40 @@ def flatten_list(l):
     return [item for sublist in l for item in sublist]
 
 
-def get_support_data_dir(current_fname=__file__):
-    # print(current_fname)
-    support_data_dir = osp.abspath(current_fname)
-    support_data_dir_split = support_data_dir.split('/')
-    # print(support_data_dir_split)
-    try:
-        support_data_dir = '/'.join(support_data_dir_split[:support_data_dir_split.index('src')])
-    except:
-        for i in range(len(support_data_dir_split)-1, 0, -1):
-            support_data_dir = '/'.join(support_data_dir_split[:i])
-            # print(i, support_data_dir)
-            list_dir = os.listdir(support_data_dir)
-            # print('-- ',list_dir)
-            if 'support_data' in list_dir: break
+SUPPORT_DATA_ENV = 'HUMAN_BODY_PRIOR_SUPPORT_DATA'
 
-    support_data_dir = osp.join(support_data_dir, 'support_data')
-    assert osp.exists(support_data_dir)
-    return support_data_dir
+
+def get_support_data_dir(current_fname=__file__):
+    """Return the absolute path to the packaged support_data directory.
+
+    The lookup works for both editable installs (repo checkouts) and wheels
+    installed into site-packages. Set the HUMAN_BODY_PRIOR_SUPPORT_DATA
+    environment variable to override the auto detection (helpful on Windows
+    when data lives outside the Python environment).
+    """
+    env_override = os.environ.get(SUPPORT_DATA_ENV)
+    if env_override:
+        env_path = Path(env_override).expanduser()
+        if env_path.is_dir():
+            return str(env_path.resolve())
+        raise FileNotFoundError(
+            f'{SUPPORT_DATA_ENV}={env_path} does not exist. '
+            f'Update the environment variable or place support_data next to the package.'
+        )
+
+    current_path = Path(current_fname).resolve()
+    for parent in current_path.parents:
+        if parent.name == 'support_data' and parent.is_dir():
+            return str(parent)
+        candidate = parent / 'support_data'
+        if candidate.is_dir():
+            return str(candidate)
+
+    raise FileNotFoundError(
+        "Could not locate the 'support_data' directory. "
+        "Place it next to the human_body_prior package or set "
+        f'the {SUPPORT_DATA_ENV} environment variable.'
+    )
 
 
 def make_deterministic(seed):

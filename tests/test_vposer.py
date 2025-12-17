@@ -21,27 +21,27 @@
 #
 # 2018.01.02
 
-import unittest
-
-from human_body_prior.train.vposer_smpl import VPoser
-from human_body_prior.tools.omni_tools import copy2cpu as c2c
-from configer import Configer
+from types import SimpleNamespace
 
 import numpy as np
+import torch
 
-class TestDistances(unittest.TestCase):
-    def setUp(self):
-        import torch
-        torch.manual_seed(100)
+from human_body_prior.models.vposer_model import VPoser
 
-    def test_samples(self):
-        ''' given the same network weights, the random pose generator must produce the same pose for a seed'''
-        ps = Configer(default_ps_fname='../human_body_prior/train/V02_00.yaml')
-        vposer = VPoser(num_neurons=ps.num_neurons, latentD=ps.latentD, data_shape = ps.data_shape)
-        body_pose_rnd = vposer.sample_poses(num_poses=1, seed=100)
 
-        body_pose_gt = np.load('samples/body_pose_rnd.npz')['data']
-        self.assertAlmostEqual(np.square((c2c(body_pose_rnd) - body_pose_gt)).sum(), 0.0)
+def _make_model_ps(num_neurons: int = 32, latent_dim: int = 16):
+    return SimpleNamespace(model_params=SimpleNamespace(num_neurons=num_neurons, latentD=latent_dim))
 
-if __name__ == '__main__':
-    unittest.main()
+
+def test_sample_poses_is_deterministic():
+    torch.manual_seed(42)
+    vposer = VPoser(_make_model_ps())
+
+    out_a = vposer.sample_poses(num_poses=2, seed=123)
+    out_b = vposer.sample_poses(num_poses=2, seed=123)
+
+    pose_a = out_a['pose_body'].detach().cpu().numpy()
+    pose_b = out_b['pose_body'].detach().cpu().numpy()
+
+    assert pose_a.shape == (2, vposer.num_joints, 3)
+    np.testing.assert_allclose(pose_a, pose_b, atol=1e-6)
