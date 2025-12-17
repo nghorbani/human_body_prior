@@ -20,28 +20,17 @@
 # Nima Ghorbani <https://nghorbani.github.io/>
 #
 # 2021.02.12
-import torch
-from human_body_prior.tools.omni_tools import copy2cpu as c2c
-
-from human_body_prior.models.ik_engine import IK_Engine
-from torch import nn
+from pathlib import Path
 from typing import Union, Iterable
-from human_body_prior.body_model.body_model import BodyModel
-import numpy as np
-from colour import Color
-
-import pickle
-from typing import Union
 
 import numpy as np
-
 import torch
 from colour import Color
 from human_body_prior.body_model.body_model import BodyModel
-from torch import nn
-
 from human_body_prior.models.ik_engine import IK_Engine
-from os import path as osp
+from human_body_prior.tools.omni_tools import copy2cpu as c2c
+from human_body_prior.tools.omni_tools import get_support_data_dir
+from torch import nn
 
 def compute_vertex_normal_batched(vertices, indices):
     from pytorch3d.structures import Meshes
@@ -68,10 +57,10 @@ class SourceKeyPoints(nn.Module):
 
         return {'source_kpts':virtual_markers, 'body': new_body}
 
-support_dir = '../support_data/dowloads'
-vposer_expr_dir = osp.join(support_dir,'vposer_v2_05') #'TRAINED_MODEL_DIRECTORY'  in this directory the trained model along with the model code exist
-bm_fname =  osp.join(support_dir,'models/smplx/neutral/model.npz')#'PATH_TO_SMPLX_model.npz'  obtain from https://smpl-x.is.tue.mpg.de/downloads
-sample_amass_fname = osp.join(support_dir, 'amass_sample.npz')# a sample npz file from AMASS
+support_dir = Path(get_support_data_dir()) / 'dowloads'
+vposer_expr_dir = str(support_dir / 'vposer_v2_05') #'TRAINED_MODEL_DIRECTORY'  in this directory the trained model along with the model code exist
+bm_fname =  str((support_dir / 'models' / 'smplx' / 'neutral' / 'model.npz').resolve()) #'PATH_TO_SMPLX_model.npz'  obtain from https://smpl-x.is.tue.mpg.de/downloads
+sample_amass_fname = str((support_dir / 'amass_sample.npz').resolve())# a sample npz file from AMASS
 
 comp_device = torch.device('cuda')
 
