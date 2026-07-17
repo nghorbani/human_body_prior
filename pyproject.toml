@@ -21,7 +21,7 @@ classifiers = [
 ]
 dependencies = [
   "numpy",
-  "torch>=2.5,<2.6",
+  "torch>=2.13.0,<2.14",
   "omegaconf",
   "loguru",
   "tqdm",
