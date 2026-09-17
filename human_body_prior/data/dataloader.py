@@ -21,7 +21,8 @@
 #
 # 2018.01.02
 
-import glob, os
+import glob
+import os
 
 import torch
 from torch.utils.data import Dataset

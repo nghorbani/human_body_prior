@@ -27,7 +27,6 @@ def pyrenderer(imw=2048, imh=2048):
     import cv2
 
     import numpy as np
-    import trimesh
 
     try:
         mv = MeshViewer(width=imw, height=imh, use_offscreen=True)
@@ -72,7 +71,6 @@ def pyrenderer(imw=2048, imh=2048):
 
 def vposer_trainer_renderer(bm, num_bodies_to_display=5):
     import numpy as np
-    import trimesh
     import torch
 
     from body_visualizer.tools.vis_tools import imagearray2file, colors
