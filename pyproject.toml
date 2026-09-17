@@ -34,7 +34,7 @@ pl = ["lightning>=2.4,<2.5"]
 vis = ["trimesh>=4,<5"]
 # Use the canonical package name from metadata to avoid uv parse errors
 psbody = ["psbody-mesh @ git+https://github.com/MPI-IS/mesh.git"]
-dev = ["pytest>=7.4,<9"]
+dev = ["pytest>=7.4,<9", "ruff>=0.6"]
 
 [tool.hatch.build]
 include = [
@@ -49,3 +49,10 @@ packages = ["human_body_prior"]
 
 [tool.hatch.metadata]
 allow-direct-references = true
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "B"]
+ignore = ["E501"]
