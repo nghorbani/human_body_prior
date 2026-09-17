@@ -27,7 +27,8 @@ from omegaconf import OmegaConf
 from loguru import logger
 
 def exprdir2model(expr_dir, model_cfg_override: dict = None):
-    if not os.path.exists(expr_dir): raise ValueError(f'Could not find the experiment directory: {expr_dir}')
+    if not os.path.exists(expr_dir):
+        raise ValueError(f'Could not find the experiment directory: {expr_dir}')
 
     model_snapshots_dir = osp.join(expr_dir, 'snapshots')
     available_ckpts = sorted(glob.glob(osp.join(model_snapshots_dir, '*.ckpt')), key=osp.getmtime)
@@ -65,7 +66,8 @@ def load_model(expr_dir, model_code=None,
 
     model_cfg, trained_weights_fname = exprdir2model(expr_dir, model_cfg_override=model_cfg_override)
 
-    if load_only_cfg: return model_cfg
+    if load_only_cfg:
+        return model_cfg
 
     assert model_code is not None, ValueError('model_code should be provided')
     model_instance = model_code(model_cfg)

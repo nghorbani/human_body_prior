@@ -22,6 +22,8 @@
 # 2020.12.12
 
 
+from typing import List, Union
+
 import numpy as np
 import torch
 from human_body_prior.tools import tgm_conversion as tgm
@@ -79,7 +81,6 @@ def matrot2aa(pose_matrot):
     :param pose_matrot: Nx3x3
     :return: Nx3
     '''
-    bs = pose_matrot.size(0)
     homogen_matrot = F.pad(pose_matrot, [0, 1])
     pose = tgm.rotation_matrix_to_angle_axis(homogen_matrot)
     return pose
@@ -90,8 +91,6 @@ def aa2matrot(pose):
     :param Nx3
     :return: pose_matrot: Nx3x3
     '''
-    bs = pose.size(0)
-    num_joints = pose.size(1) // 3
     pose_body_matrot = tgm.angle_axis_to_rotation_matrix(pose)[:, :3, :3].contiguous()  # .view(bs, num_joints*9)
     return pose_body_matrot
 
@@ -104,7 +103,8 @@ def noisy_zrot(rot_in):
         the firt element t of T will be added a random angle and this addition will happen to all frames
     '''
     is_batched = False
-    if rot_in.ndim == 2: is_batched = True
+    if rot_in.ndim == 2:
+        is_batched = True
     if not is_batched:
         rot_in = rot_in[np.newaxis]
 
@@ -123,8 +123,6 @@ def noisy_zrot(rot_in):
             rot_out.append(pose_aa.copy())
 
     return np.array(rot_out)
-
-from typing import Union, List
 
 
 def rotate_points_xyz(mesh_v: np.ndarray, Rxyz: Union[List[int], np.ndarray]):

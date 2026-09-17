@@ -31,12 +31,15 @@ from configer import Configer
 class VPoserDS(Dataset):
     """AMASS: a pytorch loader for unified human motion capture dataset. http://amass.is.tue.mpg.de/"""
 
-    def __init__(self, dataset_dir, data_fields=[]):
+    def __init__(self, dataset_dir, data_fields=None):
         assert os.path.exists(dataset_dir),dataset_dir
+        if data_fields is None:
+            data_fields = []
         self.ds = {}
         for data_fname in glob.glob(os.path.join(dataset_dir, '*.pt')):
             k = os.path.basename(data_fname).replace('.pt','')
-            if len(data_fields) != 0 and k not in data_fields: continue
+            if len(data_fields) != 0 and k not in data_fields:
+                continue
             self.ds[k] = torch.load(data_fname).type(torch.float32)
 
         dataset_ps_fname = glob.glob(os.path.join(dataset_dir, '..', '*.ini'))

@@ -28,7 +28,6 @@ import torch
 from colour import Color
 from human_body_prior.body_model.body_model import BodyModel
 from human_body_prior.models.ik_engine import IK_Engine
-from human_body_prior.tools.omni_tools import copy2cpu as c2c
 from human_body_prior.tools.omni_tools import get_support_data_dir
 from torch import nn
 
@@ -47,7 +46,7 @@ class SourceKeyPoints(nn.Module):
         self.bm = BodyModel(bm, persistant_buffer=False) if isinstance(bm, str) else bm
         self.bm_f = []#self.bm.f
         self.vids = vids
-        self.kpts_colors = np.array([Color('grey').rgb for _ in vids]) if kpts_colors == None else kpts_colors
+        self.kpts_colors = np.array([Color('grey').rgb for _ in vids]) if kpts_colors is None else kpts_colors
 
     def forward(self, body_parms):
         new_body = self.bm(**body_parms)
@@ -101,4 +100,5 @@ ik_res = ik_engine(source_pts, target_pts)
 
 ik_res_detached = {k: v.detach() for k, v in ik_res.items()}
 nan_mask = torch.isnan(ik_res_detached['trans']).sum(-1) != 0
-if nan_mask.sum() != 0: raise ValueError('Sum results were NaN!')
+if nan_mask.sum() != 0:
+    raise ValueError('Sum results were NaN!')

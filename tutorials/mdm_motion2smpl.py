@@ -25,18 +25,10 @@ from human_body_prior.tools.omni_tools import create_list_chunks
 from tqdm import tqdm
 from body_visualizer.tools.vis_tools import render_smpl_params
 from body_visualizer.tools.vis_tools import imagearray2file
-import os.path as osp
 from glob import glob
 
-import numpy as np
-import torch
-from loguru import logger
 from human_body_prior.tools.omni_tools import get_support_data_dir
 
-from body_visualizer.tools.vis_tools import imagearray2file
-from body_visualizer.tools.vis_tools import render_smpl_params
-from human_body_prior.body_model.body_model import BodyModel
-from human_body_prior.tools.omni_tools import get_support_data_dir
 class SourceKeyPoints(nn.Module):
     def __init__(self,
                  bm: Union[str, BodyModel],
@@ -50,7 +42,7 @@ class SourceKeyPoints(nn.Module):
         self.bm_f = []  # self.bm.f
         self.n_joints = n_joints
         self.kpts_colors = np.array(
-            [Color('grey').rgb for _ in range(n_joints)]) if kpts_colors == None else kpts_colors
+            [Color('grey').rgb for _ in range(n_joints)]) if kpts_colors is None else kpts_colors
 
     def forward(self, body_parms):
         new_body = self.bm(**body_parms)
@@ -76,7 +68,8 @@ def transform_smpl_coordinate(bm_fname: Path, trans: np.ndarray,
     """
     if isinstance(rotxyz, list):
         rotxyz = np.array(rotxyz).reshape(1, 3)
-    if betas.ndim == 1: betas = betas[None]
+    if betas.ndim == 1:
+        betas = betas[None]
     if betas.ndim == 2 and betas.shape[0] != 1:
         logger.warning(
             f'betas should be the same for the entire sequence. 2D np.array with 1 x num_betas: {betas.shape}. taking the mean')
@@ -183,9 +176,11 @@ def convert_mdm_mp4_to_amass_npz(skeleton_movie_fname, out_fname=None, save_rend
 
             ik_res_detached = {k: c2c(v) for k, v in ik_res.items()}
             nan_mask = np.isnan(ik_res_detached['trans']).sum(-1) != 0
-            if nan_mask.sum() != 0: raise ValueError('Sum results were NaN!')
+            if nan_mask.sum() != 0:
+                raise ValueError('Sum results were NaN!')
             for k, v in ik_res_detached.items():
-                if k not in all_results: all_results[k] = []
+                if k not in all_results:
+                    all_results[k] = []
                 all_results[k].append(v)
 
         d = {k: np.concatenate(v, axis=0) for k, v in all_results.items()}
@@ -215,7 +210,7 @@ def convert_mdm_mp4_to_amass_npz(skeleton_movie_fname, out_fname=None, save_rend
         imagearray2file(img_array, outpath=render_out_fname, fps=30)
         logger.success(f'created: {render_out_fname}')
 
-    logger.info(f'You can visualize these results as any amass npz file or in Blender via blender_smplx_addon.')
+    logger.info('You can visualize these results as any amass npz file or in Blender via blender_smplx_addon.')
 
 if __name__ == '__main__':
     import argparse
@@ -236,7 +231,7 @@ if __name__ == '__main__':
     #           }
     if (params.input is None) and (params.pattern is None):
         raise ValueError('either input or pattern should be provided')
-    if not params.input is None:
+    if params.input is not None:
         convert_mdm_mp4_to_amass_npz(skeleton_movie_fname=params.input,
                                  surface_model_type=params.model_type,
                                  gender=params.gender,

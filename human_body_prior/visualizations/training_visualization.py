@@ -30,7 +30,7 @@ def pyrenderer(imw=2048, imh=2048):
 
     try:
         mv = MeshViewer(width=imw, height=imh, use_offscreen=True)
-    except:
+    except Exception:
         import os
         os.environ['PYOPENGL_PLATFORM'] = 'egl'
         os.environ['EGL_DEVICE_ID'] = os.environ['GPU_DEVICE_ORDINAL'].split(',')[0]
@@ -53,7 +53,8 @@ def pyrenderer(imw=2048, imh=2048):
         for rId in range(nc):
             for cId in range(nc):
                 i = (nc*rId) + cId
-                if i>len(meshes): break
+                if i>len(meshes):
+                    break
 
                 mesh = meshes[i]
 
@@ -83,7 +84,7 @@ def vposer_trainer_renderer(bm, num_bodies_to_display=5):
 
     faces = c2c(bm.f)
 
-    def render_once(body_parms, body_colors=[colors['grey'], colors['brown-light']], out_fname=None):
+    def render_once(body_parms, body_colors=None, out_fname=None):
         '''
 
         :param body_parms: list of dictionaries of body parameters.
@@ -92,7 +93,10 @@ def vposer_trainer_renderer(bm, num_bodies_to_display=5):
         :return:
         '''
 
-        if out_fname is not None: makepath(out_fname, isfile=True)
+        if body_colors is None:
+            body_colors = [colors['grey'], colors['brown-light']]
+        if out_fname is not None:
+            makepath(out_fname, isfile=True)
         assert len(body_parms) <= len(body_colors), ValueError('Not enough colors provided for #{} body_parms'.format(len(body_parms)))
 
         bs = body_parms[0]['pose_body'].shape[0]
@@ -106,14 +110,15 @@ def vposer_trainer_renderer(bm, num_bodies_to_display=5):
         render_meshes = []
         for bId in body_ids:
             concat_cur_meshes = None
-            for body, body_color in zip(body_evals, body_colors):
+            for body, body_color in zip(body_evals, body_colors, strict=False):
                 cur_body_mesh = Mesh(body[bId], faces, vertex_colors=np.ones([num_verts, 3]) * body_color)
                 concat_cur_meshes = cur_body_mesh if concat_cur_meshes is None else mesh_cat(concat_cur_meshes, cur_body_mesh)
             render_meshes.append(concat_cur_meshes)
 
         img = renderer(render_meshes)
 
-        if out_fname is not None: imagearray2file(img, out_fname, fps=10)
+        if out_fname is not None:
+            imagearray2file(img, out_fname, fps=10)
 
 
         return

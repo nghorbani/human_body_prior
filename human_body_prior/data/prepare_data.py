@@ -43,7 +43,8 @@ def dataset_exists(dataset_dir, split_names=None):
     -------
 
     '''
-    if dataset_dir is None: return False
+    if dataset_dir is None:
+        return False
     if split_names is None:
         split_names = ['train', 'vald', 'test']
     import os
@@ -60,7 +61,8 @@ def dataset_exists(dataset_dir, split_names=None):
 
 def prepare_vposer_datasets(vposer_dataset_dir, amass_splits, amass_dir, logger=None):
     if dataset_exists(vposer_dataset_dir):
-        if logger is not None: logger(f'VPoser dataset already exists at {vposer_dataset_dir}')
+        if logger is not None:
+            logger(f'VPoser dataset already exists at {vposer_dataset_dir}')
         return
 
     ds_logger = log2file(makepath(vposer_dataset_dir, 'dataset.log', isfile=True), write2file_only=True)
@@ -97,18 +99,21 @@ def prepare_vposer_datasets(vposer_dataset_dir, amass_splits, amass_dir, logger=
                 # skip first and last frames to avoid initial standard poses, e.g. T pose
                 cdata_ids = np.random.choice(list(range(int(0.1 * N), int(0.9 * N), 1)), int(keep_rate * 0.8 * N),
                                              replace=False)
-                if len(cdata_ids) < 1: continue
+                if len(cdata_ids) < 1:
+                    continue
                 fullpose = cdata['poses'][cdata_ids].astype(np.float32)
                 yield {'pose_body': fullpose[:, 3:66], 'root_orient': fullpose[:, :3]}
 
     for split_name, ds_names in amass_splits.items():
-        if dataset_exists(vposer_dataset_dir, split_names=[split_name]): continue
+        if dataset_exists(vposer_dataset_dir, split_names=[split_name]):
+            continue
         logger(f'Preparing VPoser data for split {split_name}')
 
         data_fields = {}
         for data in fetch_from_amass(ds_names):
             for k in data.keys():
-                if k not in data_fields: data_fields[k] = []
+                if k not in data_fields:
+                    data_fields[k] = []
                 data_fields[k].append(data[k])
 
         for k, v in data_fields.items():

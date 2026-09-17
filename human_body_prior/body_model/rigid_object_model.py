@@ -77,15 +77,18 @@ class RigidObjectModel(nn.Module):
         self.f = torch.from_numpy(faces)
 
     def forward(self, root_orient, trans):
-        if root_orient is None: root_orient = self.root_orient
-        if trans is None: trans = self.trans
+        if root_orient is None:
+            root_orient = self.root_orient
+        if trans is None:
+            trans = self.trans
         verts = torch.bmm(self.rigid_v, batch_rodrigues(root_orient)) + trans.view(-1,1,3)
 
         res = {}
         res['v'] = verts
         res['f'] = self.f
 
-        class result_meta(object): pass
+        class result_meta(object):
+            pass
 
         res_class = result_meta()
         for k, v in res.items():
