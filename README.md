@@ -1,5 +1,7 @@
 # VPoser: Variational Human Pose Prior for Body Inverse Kinematics
 
+[![Tests](https://github.com/nghorbani/human_body_prior/actions/workflows/tests.yml/badge.svg?branch=staging)](https://github.com/nghorbani/human_body_prior/actions/workflows/tests.yml)
+
 ![alt text](support_data/vposer_samples.png "Novel Human Poses Sampled From the VPoser.")
 ## Description
 The articulated 3D pose of the human body is high-dimensional and complex. 

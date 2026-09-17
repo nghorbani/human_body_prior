@@ -26,17 +26,20 @@ import json
 import os
 
 import torch
-from human_body_prior.body_model.body_model import BodyModel
-from human_body_prior.data.dataloader import VPoserDS
-from human_body_prior.tools.model_loader import load_vposer
-from human_body_prior.tools.omni_tools import copy2cpu as c2c
-from human_body_prior.tools.omni_tools import makepath
-from human_body_prior.train.vposer_smpl import VPoserTrainer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from human_body_prior.body_model.body_model import BodyModel
+from human_body_prior.tools.omni_tools import copy2cpu as c2c
+from human_body_prior.tools.omni_tools import makepath
+
+VPOSER_DOWNLOAD_PAGE = 'https://smpl-x.is.tue.mpg.de/'
+
 
 def evaluate_model(dataset_dir, vp_model, vp_ps, batch_size=5, save_upto_bnum=10, splitname='test'):
+    from human_body_prior.data.dataloader import VPoserDS
+    from human_body_prior.train.vposer_trainer import VPoserTrainer
+
     assert splitname in ['test', 'train', 'vald']
     comp_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -46,31 +49,34 @@ def evaluate_model(dataset_dir, vp_model, vp_ps, batch_size=5, save_upto_bnum=10
     vp_model = vp_model.to(comp_device)
 
     with torch.no_grad():
-        bm = BodyModel(vp_ps.bm_fname, batch_size=1, num_betas=16).to(comp_device)
+        bm = BodyModel(vp_ps.body_model.bm_fname, batch_size=1, num_betas=16).to(comp_device)
 
     ds = VPoserDS(dataset_dir=os.path.join(dataset_dir, splitname))
     ds = DataLoader(ds, batch_size=batch_size, shuffle=False, drop_last=False)
 
-    outpath = os.path.join(vp_ps.work_dir, 'evaluations', 'ds_%s'%ds_name, os.path.basename(vp_ps.best_model_fname).replace('.pt',''), '%s_samples'%splitname)
+    outpath = os.path.join(vp_ps.logging.work_dir, 'evaluations', 'ds_%s'%ds_name, os.path.basename(vp_ps.logging.best_model_fname).replace('.pt',''), '%s_samples'%splitname)
     print('dumping to %s'%outpath)
 
     for bId, dorig in enumerate(ds):
         dorig = {k: dorig[k].to(comp_device) for k in dorig.keys()}
 
-        imgpath = makepath(os.path.join(outpath, '%s-%03d.png' % (vp_ps.expr_code, bId)), isfile=True)
+        imgpath = makepath(os.path.join(outpath, '%s-%03d.png' % (vp_ps.general.expr_id, bId)), isfile=True)
         VPoserTrainer.vis_results(dorig, bm, vp_model, imgpath, view_angles=[0, 180])#, view_angles = [0, 180, 90])
 
-        if bId> save_upto_bnum: break
+        if bId > save_upto_bnum:
+            break
 
 
 def evaluate_error(dataset_dir, vp_model, vp_ps, batch_size=512):
+    from human_body_prior.data.dataloader import VPoserDS
+
     vp_model.eval()
 
     ds_name = dataset_dir.split('/')[-2]
 
     comp_device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    bm = BodyModel(vp_ps.bm_fname, batch_size=batch_size, num_betas=16).to(comp_device)
+    bm = BodyModel(vp_ps.body_model.bm_fname, batch_size=batch_size, num_betas=16).to(comp_device)
     vp_model = vp_model.to(comp_device)
 
     # from psbody.mesh import Mesh, MeshViewer
@@ -115,27 +121,52 @@ def evaluate_error(dataset_dir, vp_model, vp_ps, batch_size=512):
         final_errors[splitname] = {'v2v_mae': float(c2c(torch.stack(loss_mean).mean()))}
         print(splitname, final_errors[splitname])
 
-    outpath = makepath(os.path.join(vp_ps.work_dir, 'evaluations', 'ds_%s'%ds_name, os.path.basename(vp_ps.best_model_fname).replace('.pt','.json')), isfile=True)
+    outpath = makepath(os.path.join(vp_ps.logging.work_dir, 'evaluations', 'ds_%s'%ds_name, os.path.basename(vp_ps.logging.best_model_fname).replace('.pt','.json')), isfile=True)
     with open(outpath, 'w') as f:
         json.dump(final_errors,f)
 
     return final_errors
 
+def main(expr_dir=None, dataset_dir=None, batch_size=512):
+    """Evaluate a trained VPoser on the splits of its dataset and return the v2v errors.
+
+    :param expr_dir: directory of a trained VPoser (settings and snapshots), for example the
+        VPoser download from https://smpl-x.is.tue.mpg.de/.
+    :param dataset_dir: prepared VPoser dataset directory; defaults to the one recorded in the
+        experiment settings.
+    :raises ValueError: when ``expr_dir`` is not given.
+    :raises FileNotFoundError: when ``expr_dir`` does not exist.
+    """
+    if expr_dir is None:
+        raise ValueError('expr_dir is required: pass the directory of a trained VPoser, for example '
+                         'the download from %s.' % VPOSER_DOWNLOAD_PAGE)
+    if not os.path.isdir(expr_dir):
+        raise FileNotFoundError('VPoser experiment directory not found at %s; download a trained VPoser '
+                                'from %s.' % (expr_dir, VPOSER_DOWNLOAD_PAGE))
+
+    from human_body_prior.models.vposer_model import VPoser
+    from human_body_prior.tools.model_loader import load_model
+
+    vp_model, vp_ps = load_model(expr_dir, model_code=VPoser, remove_words_in_model_weights='vp_model.',
+                                 disable_grad=True)
+    if dataset_dir is None:
+        dataset_dir = vp_ps.logging.dataset_dir
+    print('dataset_dir: %s' % dataset_dir)
+
+    final_errors = evaluate_error(dataset_dir, vp_model, vp_ps, batch_size=batch_size)
+    print('[%s] [DS: %s] -- %s' % (vp_ps.logging.best_model_fname, dataset_dir,
+                                   ', '.join(['%s: %.2e' % (k, v['v2v_mae']) for k, v in final_errors.items()])))
+    return final_errors
+
+
 if __name__ == '__main__':
-    expr_code = '008_SV01_T00'
-    # data_code = '007_00_00'
+    import argparse
 
-    expr_dir = '/ps/project/human_body_prior/VPoser/smpl/pytorch/%s'%expr_code
-
-    vp_model, vp_ps = load_vposer(expr_dir)
-    dataset_dir = vp_ps.dataset_dir
-    # dataset_dir = '/ps/project/human_body_prior/VPoser/data/%s/smpl/pytorch/stage_III'%data_code
-
-    print('dataset_dir: %s'%dataset_dir)
-    # # # for splitname in ['test']:
-    # for splitname in ['train', 'test', 'vald']:
-    #    evaluate_model(dataset_dir, vp_model, vp_ps, batch_size=3, save_upto_bnum=5, splitname=splitname)
-
-    final_errors = evaluate_error(dataset_dir, vp_model, vp_ps, batch_size=512)
-    print('[%s] [DS: %s] -- %s' % (vp_ps.best_model_fname, dataset_dir,  ', '.join(['%s: %.2e'%(k, v['v2v_mae']) for k,v in final_errors.items()])))
-
+    parser = argparse.ArgumentParser(description='Evaluate a trained VPoser on its dataset splits.')
+    parser.add_argument('--expr-dir', required=True,
+                        help='directory of a trained VPoser (settings and snapshots), see %s' % VPOSER_DOWNLOAD_PAGE)
+    parser.add_argument('--dataset-dir', default=None,
+                        help='prepared VPoser dataset directory; default: the one in the experiment settings')
+    parser.add_argument('--batch-size', type=int, default=512)
+    args = parser.parse_args()
+    main(expr_dir=args.expr_dir, dataset_dir=args.dataset_dir, batch_size=args.batch_size)
