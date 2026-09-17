@@ -23,6 +23,16 @@
 
 from typing import List, Dict
 
+import numpy as np
+import torch
+from torch import nn
+
+from human_body_prior.models.vposer_model import VPoser
+from human_body_prior.tools.model_loader import load_model
+from human_body_prior.tools.omni_tools import copy2cpu as c2c
+from human_body_prior.tools.omni_tools import flatten_list
+from human_body_prior.tools.omni_tools import log2file
+
 can_display = True
 
 try:
@@ -39,28 +49,16 @@ except Exception as e:
     print('psbody.mesh based visualization could not be started. skipping ...')
     can_display = False
 
-from torch import nn
-import torch
-
-from human_body_prior.tools.model_loader import load_model
-
-import numpy as np
-
-from human_body_prior.tools.omni_tools import copy2cpu as c2c
-
-from human_body_prior.tools.omni_tools import log2file
-
-from human_body_prior.models.vposer_model import VPoser
-from human_body_prior.tools.omni_tools import flatten_list
-
 
 def visualize(points, bm_f, mvs, kpts_colors, verbosity=2, logger=None):
     from human_body_prior.tools.omni_tools import log2file
 
-    if logger is None: logger = log2file()
+    if logger is None:
+        logger = log2file()
 
     def view(opt_objs, body_v, virtual_markers, opt_it):
-        if verbosity <= 0: return
+        if verbosity <= 0:
+            return
         opt_objs_cpu = {k: c2c(v) for k, v in opt_objs.items()}
 
         total_loss = np.sum([np.sum(v) for k, v in opt_objs_cpu.items()])
@@ -72,7 +70,8 @@ def visualize(points, bm_f, mvs, kpts_colors, verbosity=2, logger=None):
             np.random.seed(100)
             frame_ids = list(range(bs)) if bs <= len(mvs) else np.random.choice(bs, size=len(mvs),
                                                                                 replace=False).tolist()
-            if bs > len(mvs): message += ' -- [frame_ids: {}]'.format(frame_ids)
+            if bs > len(mvs):
+                message += ' -- [frame_ids: {}]'.format(frame_ids)
             for dispId, fId in enumerate(
                     frame_ids):  # check for the number of frames in mvs and show a randomly picked number of frames in body if there is more to show than row*cols available
                 new_body_v = rotateXYZ(body_v[fId], [-90, 0, 0])
@@ -107,7 +106,7 @@ class AdamInClosure():
 
     def step(self, closure):
         prev_loss = None
-        for it in range(self.max_iter):
+        for _it in range(self.max_iter):
             loss = closure()
             self.optimizer.step()
             if prev_loss is None:
@@ -124,7 +123,9 @@ class AdamInClosure():
         self.optimizer.zero_grad()
 
 
-def ik_fit(optimizer, source_kpts_model, static_vars, vp_model, extra_params={}, on_step=None, gstep=0):
+def ik_fit(optimizer, source_kpts_model, static_vars, vp_model, extra_params=None, on_step=None, gstep=0):
+    if extra_params is None:
+        extra_params = {}
     data_loss = extra_params.get('data_loss', torch.nn.SmoothL1Loss(reduction='mean'))
 
     # data_loss =
@@ -173,8 +174,8 @@ class IK_Engine(nn.Module):
     def __init__(self,
                  vposer_expr_dir: str,
                  data_loss,
-                 optimizer_args: dict = {'type': 'ADAM'},
-                 stepwise_weights: List[Dict] = [{'data': 10., 'poZ_body': .01, 'betas': .5}],
+                 optimizer_args: dict = None,
+                 stepwise_weights: List[Dict] = None,
                  display_rc: tuple = (2, 1),
                  verbosity: int = 1,
                  num_betas: int = 16,
@@ -194,8 +195,13 @@ class IK_Engine(nn.Module):
 
         super(IK_Engine, self).__init__()
 
+        if optimizer_args is None:
+            optimizer_args = {'type': 'ADAM'}
+        if stepwise_weights is None:
+            stepwise_weights = [{'data': 10., 'poZ_body': .01, 'betas': .5}]
+
         assert isinstance(stepwise_weights, list), ValueError('stepwise_weights should be a list of dictionaries.')
-        assert np.all(['data' in l for l in stepwise_weights]), ValueError(
+        assert np.all(['data' in wts for wts in stepwise_weights]), ValueError(
             'The term data should be available in every weight of anealed optimization step: {}'.format(
                 stepwise_weights))
 
@@ -219,12 +225,14 @@ class IK_Engine(nn.Module):
                                       remove_words_in_model_weights='vp_model.',
                                       disable_grad=True)
 
-    def forward(self, source_kpts, target_kpts, initial_body_params={}):
+    def forward(self, source_kpts, target_kpts, initial_body_params=None):
         '''
         source_kpts is a function that given body parameters computes source key points that should match target key points
         Try to reconstruct the bps signature by optimizing the body_poZ
         '''
         # if self.rt_ps.verbosity > 0: self.logger('Processing {} frames'.format(points.shape[0]))
+        if initial_body_params is None:
+            initial_body_params = {}
         bs = target_kpts.shape[0]
 
         on_step = visualize(target_kpts,
@@ -289,7 +297,7 @@ class IK_Engine(nn.Module):
         # try:
 
         for wts in self.stepwise_weights:
-            optimizer.step(lambda: closure(wts, free_vars))
+            optimizer.step(lambda wts=wts, free_vars=free_vars: closure(wts, free_vars))
             free_vars = closure.free_vars
         # except:
         #

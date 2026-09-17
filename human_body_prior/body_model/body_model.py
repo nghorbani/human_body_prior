@@ -82,8 +82,9 @@ class BodyModel(nn.Module):
             else:
                 raise (ValueError('dmpl_fname should be provided when using dmpls!'))
 
-        if self.use_dmpl and self.model_type in ['smplx', 'mano', 'animal_horse', 'animal_dog']: raise (
-            NotImplementedError('DMPLs only work with SMPL/SMPLH models for now.'))
+        if self.use_dmpl and self.model_type in ['smplx', 'mano', 'animal_horse', 'animal_dog']:
+            raise (
+                NotImplementedError('DMPLs only work with SMPL/SMPLH models for now.'))
 
         self.use_expression = self.model_type in ['smplx','flame'] and num_expressions is not None
 
@@ -206,30 +207,45 @@ class BodyModel(nn.Module):
         # assert not (v_template is not None and betas is not None), ValueError('vtemplate and betas could not be used jointly.')
         assert self.model_type in ['smpl', 'smplh', 'smplx', 'mano', 'animal_horse', 'animal_dog', 'flame', 'animal_rat'], ValueError(
             'model_type should be in smpl/smplh/smplx/mano')
-        if root_orient is None:  root_orient = self.init_root_orient.expand(batch_size, -1)
+        if root_orient is None:
+            root_orient = self.init_root_orient.expand(batch_size, -1)
         if self.model_type in ['smplh', 'smpl']:
-            if pose_body is None:  pose_body = self.init_pose_body.expand(batch_size, -1)
-            if pose_hand is None:  pose_hand = self.init_pose_hand.expand(batch_size, -1)
+            if pose_body is None:
+                pose_body = self.init_pose_body.expand(batch_size, -1)
+            if pose_hand is None:
+                pose_hand = self.init_pose_hand.expand(batch_size, -1)
         elif self.model_type == 'smplx':
-            if pose_body is None:  pose_body = self.init_pose_body.expand(batch_size, -1)
-            if pose_hand is None:  pose_hand = self.init_pose_hand.expand(batch_size, -1)
-            if pose_jaw is None:  pose_jaw = self.init_pose_jaw.expand(batch_size, -1)
-            if pose_eye is None:  pose_eye = self.init_pose_eye.expand(batch_size, -1)
+            if pose_body is None:
+                pose_body = self.init_pose_body.expand(batch_size, -1)
+            if pose_hand is None:
+                pose_hand = self.init_pose_hand.expand(batch_size, -1)
+            if pose_jaw is None:
+                pose_jaw = self.init_pose_jaw.expand(batch_size, -1)
+            if pose_eye is None:
+                pose_eye = self.init_pose_eye.expand(batch_size, -1)
         elif self.model_type == 'flame':
-            if pose_body is None:  pose_body = self.init_pose_body.expand(batch_size, -1)
-            if pose_jaw is None:  pose_jaw = self.init_pose_jaw.expand(batch_size, -1)
-            if pose_eye is None:  pose_eye = self.init_pose_eye.expand(batch_size, -1)
+            if pose_body is None:
+                pose_body = self.init_pose_body.expand(batch_size, -1)
+            if pose_jaw is None:
+                pose_jaw = self.init_pose_jaw.expand(batch_size, -1)
+            if pose_eye is None:
+                pose_eye = self.init_pose_eye.expand(batch_size, -1)
         elif self.model_type in ['mano',]:
-            if pose_hand is None:  pose_hand = self.init_pose_hand.expand(batch_size, -1)
+            if pose_hand is None:
+                pose_hand = self.init_pose_hand.expand(batch_size, -1)
         elif self.model_type in ['animal_horse','animal_dog', 'animal_rat']:
-            if pose_body is None:  pose_body = self.init_pose_body.expand(batch_size, -1)
+            if pose_body is None:
+                pose_body = self.init_pose_body.expand(batch_size, -1)
 
         if pose_hand is None and self.model_type not in ['animal_horse', 'animal_dog', 'animal_rat','flame']:
             pose_hand = self.init_pose_hand.expand(batch_size, -1)
 
-        if trans is None: trans = self.init_trans.expand(batch_size, -1)
-        if v_template is None: v_template = self.init_v_template.expand(batch_size, -1,-1)
-        if betas is None: betas = self.init_betas.expand(batch_size, -1)
+        if trans is None:
+            trans = self.init_trans.expand(batch_size, -1)
+        if v_template is None:
+            v_template = self.init_v_template.expand(batch_size, -1,-1)
+        if betas is None:
+            betas = self.init_betas.expand(batch_size, -1)
 
         if self.model_type in ['smplh', 'smpl']:
             full_pose = torch.cat([root_orient, pose_body, pose_hand], dim=-1)
@@ -243,11 +259,13 @@ class BodyModel(nn.Module):
             full_pose = torch.cat([root_orient, pose_body], dim=-1)
 
         if self.use_dmpl:
-            if dmpls is None: dmpls = self.init_dmpls.expand(batch_size, -1)
+            if dmpls is None:
+                dmpls = self.init_dmpls.expand(batch_size, -1)
             shape_components = torch.cat([betas, dmpls], dim=-1)
             shapedirs = torch.cat([self.shapedirs, self.dmpldirs], dim=-1)
         elif self.use_expression:
-            if expression is None: expression = self.init_expression.expand(batch_size, -1)
+            if expression is None:
+                expression = self.init_expression.expand(batch_size, -1)
             shape_components = torch.cat([betas, expression], dim=-1)
             shapedirs = torch.cat([self.shapedirs, self.exprdirs], dim=-1)
         else:

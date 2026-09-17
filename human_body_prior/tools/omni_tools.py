@@ -30,7 +30,8 @@ import torch
 
 
 def copy2cpu(tensor):
-    if isinstance(tensor, np.ndarray): return tensor
+    if isinstance(tensor, np.ndarray):
+        return tensor
     return tensor.detach().cpu().numpy()
 
 
@@ -46,8 +47,8 @@ def trainable_params_count(params):
     return sum([p.numel() for p in params if p.requires_grad])
 
 
-def flatten_list(l):
-    return [item for sublist in l for item in sublist]
+def flatten_list(nested_list):
+    return [item for sublist in nested_list for item in sublist]
 
 
 SUPPORT_DATA_ENV = 'HUMAN_BODY_PRIOR_SUPPORT_DATA'
@@ -105,8 +106,10 @@ def id_generator(size=13):
 
 def logger_sequencer(logger_list, prefix=None):
     def post_text(text):
-        if prefix is not None: text = '{} -- '.format(prefix) + text
-        for logger_call in logger_list: logger_call(text)
+        if prefix is not None:
+            text = '{} -- '.format(prefix) + text
+        for logger_call in logger_list:
+            logger_call(text)
 
     return post_text
 
@@ -124,13 +127,16 @@ class log2file():
         self.write2file_only = write2file_only
 
     def __call__(self, text):
-        if text is None: return
-        if self.prefix != '': text = '{} -- '.format(self.prefix) + text
+        if text is None:
+            return
+        if self.prefix != '':
+            text = '{} -- '.format(self.prefix) + text
         # breakpoint()
         if self.auto_newline:
             if not text.endswith('\n'):
                 text = text + '\n'
-        if not self.write2file_only: sys.stderr.write(text)
+        if not self.write2file_only:
+            sys.stderr.write(text)
         if self.fhandle is not None:
             self.fhandle.write(text)
             self.fhandle.flush()
@@ -146,9 +152,11 @@ def makepath(*args, **kwargs):
     import os
     desired_path = os.path.join(*args)
     if isfile:
-        if not os.path.exists(os.path.dirname(desired_path)): os.makedirs(os.path.dirname(desired_path))
+        if not os.path.exists(os.path.dirname(desired_path)):
+            os.makedirs(os.path.dirname(desired_path))
     else:
-        if not os.path.exists(desired_path): os.makedirs(desired_path)
+        if not os.path.exists(desired_path):
+            os.makedirs(desired_path)
     return desired_path
 
 
@@ -203,4 +211,5 @@ def apply_mesh_tranfsormations_(meshes, transf):
         meshes[i] = meshes[i].apply_transform(transf)
 
 
-def rm_spaces(in_text): return in_text.replace(' ', '_')
+def rm_spaces(in_text):
+    return in_text.replace(' ', '_')

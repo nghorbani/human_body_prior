@@ -121,7 +121,8 @@ class VPoserTrainer(LightningModule):
 
     @rank_zero_only
     def on_train_start(self):
-        if self.global_rank != 0: return
+        if self.global_rank != 0:
+            return
         self.train_starttime = dt.now().replace(microsecond=0)
 
         ######## make a backup of vposer
@@ -142,7 +143,8 @@ class VPoserTrainer(LightningModule):
         return self._get_data('vald')
 
     def configure_optimizers(self):
-        params_count = lambda params: sum(p.numel() for p in params if p.requires_grad)
+        def params_count(params):
+            return sum(p.numel() for p in params if p.requires_grad)
 
         gen_params = [a[1] for a in self.vp_model.named_parameters() if a[1].requires_grad]
         gen_optimizer_class = getattr(optim_module, self.vp_ps.train_parms.gen_optimizer.type)

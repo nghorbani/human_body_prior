@@ -29,6 +29,7 @@ import torch
 from colour import Color
 from human_body_prior.body_model.body_model import BodyModel
 from human_body_prior.models.ik_engine import IK_Engine
+from human_body_prior.tools.omni_tools import create_list_chunks
 from human_body_prior.tools.omni_tools import get_support_data_dir
 from torch import nn
 
@@ -44,7 +45,7 @@ class SourceKeyPoints(nn.Module):
         self.bm = BodyModel(bm, persistant_buffer=False) if isinstance(bm, str) else bm
         self.bm_f = []#self.bm.f
         self.n_joints = n_joints
-        self.kpts_colors = np.array([Color('grey').rgb for _ in range(n_joints)]) if kpts_colors == None else kpts_colors
+        self.kpts_colors = np.array([Color('grey').rgb for _ in range(n_joints)]) if kpts_colors is None else kpts_colors
 
     def forward(self, body_parms):
         new_body = self.bm(**body_parms)
@@ -89,7 +90,6 @@ ik_engine = IK_Engine(vposer_expr_dir=vposer_expr_dir,
                       stepwise_weights=stepwise_weights,
                       optimizer_args=optimizer_args).to(comp_device)
 
-from human_body_prior.tools.omni_tools import create_list_chunks
 frame_ids = np.arange(len(target_bm.v))
 np.random.shuffle(frame_ids)
 batch_size = 4
@@ -104,4 +104,5 @@ for rnd_frame_ids in create_list_chunks(frame_ids, batch_size, overlap_size=0, c
 
     ik_res_detached = {k: v.detach() for k, v in ik_res.items()}
     nan_mask = torch.isnan(ik_res_detached['trans']).sum(-1) != 0
-    if nan_mask.sum() != 0: raise ValueError('Sum results were NaN!')
+    if nan_mask.sum() != 0:
+        raise ValueError('Sum results were NaN!')
