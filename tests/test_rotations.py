@@ -22,10 +22,17 @@
 # 2018.12.13
 
 import numpy as np
+import pytest
 import torch
 from transforms3d.axangles import axangle2mat, mat2axangle
 
 from human_body_prior.tools.rotation_tools import aa2matrot, matrot2aa
+
+
+@pytest.fixture(autouse=True)
+def _seed_random_inputs():
+    torch.manual_seed(0)
+    np.random.seed(0)
 
 
 def _axis_angle_to_matrix(vec: np.ndarray) -> np.ndarray:
@@ -51,10 +58,12 @@ def test_aa2matrot_matches_transforms3d():
 
 
 def test_matrot2aa_round_trip():
+    # A rotation with an angle above pi maps back to the equivalent axis-angle vector below pi, so
+    # the vectors may differ while the rotation is the same. Compare the rotations, not the vectors.
     aa = torch.randn(10, 3)
     mats = aa2matrot(aa)
-    recovered = matrot2aa(mats).detach().cpu().numpy()
-    np.testing.assert_allclose(recovered, aa.detach().cpu().numpy(), atol=1e-5)
+    recovered = matrot2aa(mats)
+    np.testing.assert_allclose(aa2matrot(recovered).detach().cpu().numpy(), mats.detach().cpu().numpy(), atol=1e-5)
 
 
 def test_matrot2aa_matches_transforms3d():
