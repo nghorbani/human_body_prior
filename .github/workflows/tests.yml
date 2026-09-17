@@ -1,0 +1,33 @@
+name: Tests
+
+on:
+  push:
+    branches: [ staging ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install uv and Python ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+        enable-cache: true
+
+    - name: Install package with dev dependencies
+      run: uv sync --extra dev --frozen
+
+    - name: Lint with ruff
+      run: uv run ruff check .
+
+    - name: Run tests with pytest
+      run: uv run pytest -q
