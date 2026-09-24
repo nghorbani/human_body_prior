@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-pl = ["lightning>=2.4,<2.5"]
+pl = ["lightning>=2.6.6,<2.7"]
 vis = ["trimesh>=4,<5"]
 # Use the canonical package name from metadata to avoid uv parse errors
 psbody = ["psbody-mesh @ git+https://github.com/MPI-IS/mesh.git"]
