@@ -273,6 +273,43 @@ def rotation_matrix_to_quaternion(rotation_matrix, eps=1e-6):
 
     rmat_t = torch.transpose(rotation_matrix, 1, 2)
 
+    # Share matrix entries only when no backward accumulation is needed.
+    if type(rotation_matrix) is torch.Tensor and not rotation_matrix.requires_grad:
+        row0, row1, row2, _ = rmat_t.unbind(1)
+        r00, r01, r02 = row0.unbind(-1)
+        r10, r11, r12 = row1.unbind(-1)
+        r20, r21, r22 = row2.unbind(-1)
+
+        mask_d2 = r22 < eps
+        mask_d0_d1 = r00 > r11
+        mask_d0_nd1 = r00 < -r11
+        t0 = 1 + r00 - r11 - r22
+        t1 = 1 - r00 + r11 - r22
+        t2 = 1 - r00 - r11 + r22
+        t3 = 1 + r00 + r11 + r22
+        s01 = r01 + r10
+        s02 = r20 + r02
+        s12 = r12 + r21
+        d01 = r01 - r10
+        d02 = r20 - r02
+        d12 = r12 - r21
+        q0 = torch.stack([d12, t0, s01, s02], -1)
+        q1 = torch.stack([d02, s01, t1, s12], -1)
+        q2 = torch.stack([d01, s02, s12, t2], -1)
+        q3 = torch.stack([t3, d12, d02, d01], -1)
+
+        not_d2 = torch.logical_not(mask_d2)
+        mask_c0 = (mask_d2 * mask_d0_d1).view(-1, 1).type_as(q0)
+        mask_c1 = (mask_d2 * torch.logical_not(mask_d0_d1)).view(-1, 1).type_as(q1)
+        mask_c2 = (not_d2 * mask_d0_nd1).view(-1, 1).type_as(q2)
+        mask_c3 = (not_d2 * torch.logical_not(mask_d0_nd1)).view(-1, 1).type_as(q3)
+        q = q0 * mask_c0 + q1 * mask_c1 + q2 * mask_c2 + q3 * mask_c3
+        denominator = (t0.unsqueeze(-1) * mask_c0 + t1.unsqueeze(-1) * mask_c1 +
+                       t2.unsqueeze(-1) * mask_c2 + t3.unsqueeze(-1) * mask_c3)
+        q /= torch.sqrt(denominator)
+        q *= 0.5
+        return q
+
     mask_d2 = rmat_t[:, 2, 2] < eps
 
     mask_d0_d1 = rmat_t[:, 0, 0] > rmat_t[:, 1, 1]
@@ -345,20 +382,29 @@ def quaternion_to_angle_axis(quaternion) -> torch.Tensor:
         raise ValueError("Input must be a tensor of shape Nx4 or 4. Got {}"
                          .format(quaternion.shape))
     # unpack input and compute conversion
-    q1 = quaternion[..., 1]
-    q2 = quaternion[..., 2]
-    q3 = quaternion[..., 3]
+    fast = (type(quaternion) is torch.Tensor and not quaternion.requires_grad
+            and quaternion.is_floating_point())
+    if fast:
+        cos_theta, q1, q2, q3 = quaternion.unbind(-1)
+    else:
+        q1 = quaternion[..., 1]
+        q2 = quaternion[..., 2]
+        q3 = quaternion[..., 3]
+        cos_theta = quaternion[..., 0]
     sin_squared_theta = q1 * q1 + q2 * q2 + q3 * q3
 
     sin_theta = torch.sqrt(sin_squared_theta)
-    cos_theta = quaternion[..., 0]
     two_theta = 2.0 * torch.where(
         cos_theta < 0.0,
         torch.atan2(-sin_theta, -cos_theta),
         torch.atan2(sin_theta, cos_theta))
 
     k_pos = two_theta / sin_theta
-    k_neg = 2.0 * torch.ones_like(sin_theta)
+    if fast:
+        k = torch.where(sin_squared_theta > 0.0, k_pos, 2.0)
+        return quaternion[..., 1:] * k.unsqueeze(-1) + 0.0
+
+    k_neg = torch.full_like(sin_theta, 2.0)
     k = torch.where(sin_squared_theta > 0.0, k_pos, k_neg)
 
     angle_axis = torch.zeros_like(quaternion)[..., :3]
